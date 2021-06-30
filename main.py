@@ -16,13 +16,20 @@ import numpy as np
 import math
 import yaml
 
+import Xlib.display # pip install python-xlib
+
 # Local code
 from ParametricShapes import makeCylinder, makePlane
 
 # Globally change window title name
 windowTitle = "Linear Environment"
 loadPrcFileData("", f"window-title {windowTitle}")
-loadPrcFileData("", "fullscreen true")
+
+display = Xlib.display.Display()
+root = display.screen(0).root # TODO: Handle multiple screens with different resolution
+desktop = root.get_geometry()
+loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
+# loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
 
 # You can't normalize inline so this is a helper function
 def normalized(*args):
