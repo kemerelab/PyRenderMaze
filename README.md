@@ -14,6 +14,9 @@ To test,
 + you can use the up and down arrow keys to control position, or
 + you can set the `playerMode = False`, and run `send_position_stream.py` to simulate actual mouse movement data
 
+Notes:
++ gist about compiling Panda3D for Raspberry Pi / Ubuntu: [https://gist.github.com/ckemere/c862155111f929ad35f5c7eb0024143f] 
+
 TODO:
 + Implement receiving (and sending) maze configuration over a ZeroMQ connection (or other approach).
 + Maze configuration should also specify what the camera view is (i.e., left, right, or straight ahead)!
