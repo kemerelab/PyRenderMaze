@@ -2,12 +2,12 @@
 from panda3d.core import *
 from direct.showbase.ShowBase import ShowBase
 # Basic intervals
-from direct.interval.IntervalGlobal import *
+# from direct.interval.IntervalGlobal import *
 from direct.interval.LerpInterval import *
 # Task managers
 from direct.task.Task import Task
 # GUI
-from direct.gui.DirectGui import *
+# from direct.gui.DirectGui import *
 from panda3d.core import loadPrcFileData
 
 # Utilities
@@ -18,17 +18,20 @@ import yaml
 
 import Xlib.display # pip install python-xlib
 
+import sys
+
 # Local code
 from ParametricShapes import makeCylinder, makePlane
+
 
 # Globally change window title name
 windowTitle = "Linear Environment"
 loadPrcFileData("", f"window-title {windowTitle}")
 
-display = Xlib.display.Display()
-root = display.screen(0).root # TODO: Handle multiple screens with different resolution
-desktop = root.get_geometry()
-loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
+# display = Xlib.display.Display()
+# root = display.screen(0).root # TODO: Handle multiple screens with different resolution
+# desktop = root.get_geometry()
+# loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
 # loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
 
 # You can't normalize inline so this is a helper function
@@ -96,11 +99,11 @@ class App(ShowBase):
         fileName="example-mazes/example1.yaml"
         # Read YAML file
         with open(fileName, 'r') as stream:
-            trackConfig = yaml.safe_load(stream)
+            self.trackConfig = yaml.safe_load(stream)
 
-        print(trackConfig)
-        self.trackLength = trackConfig.get('TrackLength', 240)
-        self.wallHeight = trackConfig.get('wallHeight', 20)
+        print(self.trackConfig)
+        self.trackLength = self.trackConfig.get('TrackLength', 240)
+        self.wallHeight = self.trackConfig.get('wallHeight', 20)
 
         # Init camera
         self.camConfigDefault = "perspective"
@@ -117,70 +120,90 @@ class App(ShowBase):
         lens.setFar(5000.0)
         self.cam.node().setLens(lens)
 
-        testTexture = loader.loadTexture("textures/numbers.png")
-        grating = loader.loadTexture("textures/grating.png")
-        checkerboard = loader.loadTexture("textures/checkerboard.png")
-        noise = loader.loadTexture("textures/whitenoise.png")
-        gaussian = loader.loadTexture("textures/gaussian.png")
-        raised_sine = loader.loadTexture("textures/raised_sine.png")
-
-        room_wall_cylinder = makeCylinder(0, self.trackLength/2, -5*self.roomSize/2, self.roomSize, 10*self.roomSize, facing="inward", texHScaling=12, texVScaling=12, fixedColor=1.0)
-        snode = GeomNode('room_walls')
-        snode.addGeom(room_wall_cylinder)
-        room_walls = self.render.attachNewNode(snode)
-        room_walls.setTexture(noise)
-        # walls_node.setTwoSided(True)
-
-        self.initTrack(trackConfig.get('TrackFeatures', None))
+        self.maze_geometry_root = None
+        self.maze_geometry_root = self.init_track(self.trackConfig.get('TrackFeatures', None))
 
         base.setBackgroundColor(0, 0, 0)  # set the background color to black
-        self.fog = Fog('distanceFog')
-        self.fog.setColor(0, 0, 0)
-        self.fog.setLinearRange(0, self.trackLength)
-        self.fog.setExpDensity(.02)
-        render.setFog(self.fog)
 
         # Key movement
         self.isKeyDown = {}
         self.createKeyControls()
 
+        # if (self.playerMode):
+        self.taskMgr.add(self.keyPressHandler, "KeyPressHandler")
+        # else:
+
+        # Init ZMQ connection to server
+        port = "8556"
+        # Socket to talk to server
+        context = zmq.Context()
+        self.socket = context.socket(zmq.SUB)
+        if self.printStatements:
+            print("Collecting updates from keyboard server...")
+        self.socket.connect ("tcp://localhost:%s" % port)
+        self.socket.setsockopt(zmq.SUBSCRIBE, b"")
+        self.poller = zmq.Poller()
+        self.poller.register(self.socket, zmq.POLLIN)
+        self.last_timestamp = 0
+        self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
 
 
-        if (self.playerMode):
-            self.taskMgr.add(self.keyPressHandler, "KeyPressHandler")
-        else:
-            # Init ZMQ connection to server
-            port = "8556"
-            # Socket to talk to server
-            context = zmq.Context()
-            self.socket = context.socket(zmq.SUB)
-            if self.printStatements:
-                print("Collecting updates from keyboard server...")
-            self.socket.connect ("tcp://localhost:%s" % port)
-            self.socket.setsockopt(zmq.SUBSCRIBE, b"")
-            self.poller = zmq.Poller()
-            self.poller.register(self.socket, zmq.POLLIN)
-            self.last_timestamp = 0
-            self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
+        window_properties = WindowProperties()
+        window_properties.setSize(800, 600)
+        window_properties.setTitle('win2')
+        self.second_view = base.openWindow(props=window_properties, keepCamera=False, makeCamera=True, requireWindow=True)
+        self.cam2 = base.camList[-1]
+        self.camera = base.camList[0]
+        print(self.camera, base.camList)
 
-    def initTrack(self, trackFeatures):
+        mk = base.dataRoot.attachNewNode(MouseAndKeyboard(self.second_view, 0, 'w2mouse'))
+        bt = mk.attachNewNode(ButtonThrower('w2mouse'))
+        mods = ModifierButtons()
+        mods.addButton(KeyboardButton.shift())
+        mods.addButton(KeyboardButton.control())
+        mods.addButton(KeyboardButton.alt())
+        bt.node().setModifierButtons(mods)
+
+
+
+
+    def remove_model(self):
+        if self.maze_geometry_root:
+            self.maze_geometry_root.removeNode()
+            self.maze_geometry_root = None
+    
+    def draw_model(self):
+        if self.maze_geometry_root:
+            self.remove_model()
+        self.maze_geometry_root = self.init_track(self.trackConfig.get('TrackFeatures', None))
+
+    def init_track(self, trackFeatures):
         testTexture = loader.loadTexture("textures/numbers.png")
         checkerboard = loader.loadTexture("textures/checkerboard.png")
         noise = loader.loadTexture("textures/whitenoise.png")
 
-        # raceTrackStartPoint = self.trackLength/2 # I think the start should be yPos = 0. That coordinate fits with our other code.
+        maze_root_node = GeomNode("maze_root_node")
+        maze_geometry_root = self.render.attachNewNode(maze_root_node)
+
+        room_wall_cylinder = makeCylinder(0, self.trackLength/2, -5*self.roomSize/2, self.roomSize, 10*self.roomSize, 
+                                          facing="inward", texHScaling=12, texVScaling=12, fixedColor=1.0)
+
+        snode = GeomNode('room_walls')
+        snode.addGeom(room_wall_cylinder)
+        room_walls = maze_geometry_root.attachNewNode(snode)
+        room_walls.setTexture(noise)
+        # walls_node.setTwoSided(True)
+
 
         # trackLength, trackWidth, wallDistance all could be parametric, but I think most likely these wouldn't need to change often
-
-        parent_node = GeomNode('MazeParent')
-        maze_parent = self.render.attachNewNode(parent_node)
+        track_parent = maze_geometry_root.attachNewNode(GeomNode('MazeParent'))
 
         # Floor - always the same. Really should make it slightly blue to match wheels
         floor = makePlane(0, self.trackLength/2, self.trackVPos, self.trackWidth, self.trackLength, facing="up", 
                                     fixedColor=0.1, texHScaling=10, texVScaling=self.trackLength/self.trackWidth*10)
         snode = GeomNode('floor')
         snode.addGeom(floor)
-        floor_node = maze_parent.attachNewNode(snode)
+        floor_node = track_parent.attachNewNode(snode)
         floor_node.setTexture(noise) # The fiberglass wheel has a noise-like texture. Its more like cross hatching, but that's ok for now
 
         # if self.printStatements:
@@ -201,11 +224,12 @@ class App(ShowBase):
                                                     length, self.wallHeight, facing="right", fixedColor=0.5,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
-                    wall_segment = maze_parent.attachNewNode(snode)
+                    wall_segment = track_parent.attachNewNode(snode)
                     tex = loader.loadTexture(feature['Texture'])
                     wall_segment.setTexture(tex)
                     if 'RotateTexture' in feature:
                         wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
+
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
@@ -222,7 +246,7 @@ class App(ShowBase):
                                                             self.trackVPos, r, h, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
-                    cylinder_node = self.render.attachNewNode(snode)
+                    cylinder_node = track_parent.attachNewNode(snode)
                     tex = loader.loadTexture(feature['Texture'])
                     cylinder_node.setTexture(tex)
                     if 'RotateTexture' in feature:
@@ -245,20 +269,22 @@ class App(ShowBase):
                                             self.trackLength, self.wallHeight, facing="right", fixedColor=0.5,
                                             texHScaling=self.trackLength/self.wallHeight)
             snode.addGeom(left)
-            walls = maze_parent.attachNewNode(snode)
+            walls = track_parent.attachNewNode(snode)
 
 
 
         # Make a copy of the walls and floor at the end of the maze. This makes it look like it goes on further
-        node = GeomNode('copy_parent')
-        maze_geometry_copy_parent = self.render.attachNewNode(node)
-        second_maze = maze_parent.copyTo(maze_geometry_copy_parent)
+        node = GeomNode('track_copy')
+        maze_geometry_copy_parent = maze_geometry_root.attachNewNode(node)
+        second_maze = track_parent.copyTo(maze_geometry_copy_parent)
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
             
         # alight = AmbientLight('alight')
         # alight.setColor((1, 1, 1, 1))
         # alnp = self.render.attachNewNode(alight)
         # self.render.setLight(alnp)
+
+        return maze_geometry_root
 
     def createKeyControls(self):
             functionToKeys = {
@@ -275,20 +301,16 @@ class App(ShowBase):
                 for key in keys:
                     # Key Down
                     self.accept(key, self.setKeyDown, [fn, 1])
-
                     # Key Up
                     self.accept(key+"-up", self.setKeyDown, [fn, -1])
 
             keyReleaseMap = [
+                (self.exit_fun, ["escape"], None),
+                (self.remove_model, ["x"], None),
+                (self.draw_model, ["m"], None),
                 (self.setCameraView, ["1"], ["perspective"]),
                 (self.setCameraView, ["2"], ["lookingLeft"]),
                 (self.setCameraView, ["3"], ["lookingRight"]),
-                # (self.turnLightsOn, ["4"], ["lightsOn"]),
-                # (self.turnLightsOff, ["5"], ["lightsOff"]),
-                (self.toggleFog, ["6"], [render, self.fog]),
-                (self.addFogDensity, ["m"], [0.001]),
-                (self.addFogDensity, ["n"], [-0.001]),
-                (self.oobe, ["="], None),
             ]
 
             for fn, keys, args in keyReleaseMap:
@@ -297,6 +319,10 @@ class App(ShowBase):
                         self.accept(key+"-up", fn, args)
                     else:
                         self.accept(key+"-up", fn)
+
+    def exit_fun(self):
+        print('Exit called')
+        sys.exit()
 
     def setKeyDown(self, key, value):
         self.isKeyDown[key] += value
@@ -313,32 +339,13 @@ class App(ShowBase):
             pass
 
         self.camera.setPos(self.posX, self.posY, self.posZ + self.camHeight)
+        self.cam2.setPos(self.posX, self.posY, self.posZ + self.camHeight)
         # self.camera.setPos(self.posX + xOffset, (self.posY) % self.racetrack.treadmillLength, self.posZ + camHeight)
 
         return Task.cont
 
     def setCameraView(self, view):
         self.camConfig = view
-
-    def addFogDensity (self, change):
-        self.fog.setExpDensity(
-            min(1, max(0, self.fog.getExpDensity() + change)))
-        print("density: ", self.fog.getExpDensity())
-
-    def turnLightsOn(self):
-        return
-
-    def turnLightsOff(self):
-        return
-
-    def toggleFog(self, node, fog):
-        # If the fog attached to the node is equal to the one we passed in, then
-        # fog is on and we should clear it
-        if node.getFog() == fog:
-            node.clearFog()
-        # Otherwise fog is not set so we should set it
-        else:
-            node.setFog(fog)
 
     def keyPressHandler(self, task):
         flag = False
@@ -372,6 +379,7 @@ class App(ShowBase):
         if posY != self.posY:
             self.posY = posY
             print(self.posY)
+
         return Task.cont
 
     def getPos(self):
