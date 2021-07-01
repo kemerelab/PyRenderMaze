@@ -21,8 +21,7 @@ from ParametricShapes import makeCylinder, makePlane
 
 # Globally change window title name
 windowTitle = "Linear Environment"
-loadPrcFileData("", f"window-title {windowTitle}")
-loadPrcFileData("", "fullscreen true")
+# loadPrcFileData("", "fullscreen true")
 
 # You can't normalize inline so this is a helper function
 def normalized(*args):
@@ -126,18 +125,16 @@ class App(ShowBase):
 
         self.initTrack(trackConfig.get('TrackFeatures', None))
 
-        base.setBackgroundColor(0, 0, 0)  # set the background color to black
+        # base.setBackgroundColor(0, 0, 0)  # set the background color to black
         self.fog = Fog('distanceFog')
         self.fog.setColor(0, 0, 0)
         self.fog.setLinearRange(0, self.trackLength)
-        self.fog.setExpDensity(.02)
+        self.fog.setExpDensity(.002)
         render.setFog(self.fog)
 
         # Key movement
         self.isKeyDown = {}
         self.createKeyControls()
-
-
 
         if (self.playerMode):
             self.taskMgr.add(self.keyPressHandler, "KeyPressHandler")
@@ -226,7 +223,6 @@ class App(ShowBase):
             #          - need a function to (1) check that bounds never overlap, and (2) find residual
             #            segment boundaries
 
-
         else:
             # Default walls - light gray. Height could be parametric. These will fill any unspecified gaps
             snode = GeomNode('default_walls')
@@ -240,7 +236,17 @@ class App(ShowBase):
             snode.addGeom(left)
             walls = maze_parent.attachNewNode(snode)
 
+        entire_Wall_Node = GeomNode('entire_walls')
+        entire_Left_Wall = makePlane(-self.wallDistance-0.01, center, self.trackVPos + self.wallHeight/2, 
+                                                    self.trackLength*2, self.wallHeight, facing="right", fixedColor=0.4,
+                                                    texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
+        entire_Wall_Node.addGeom(entire_Left_Wall)
+        entire_Right_Wall = makePlane(self.wallDistance+0.01, center, self.trackVPos + self.wallHeight/2, 
+                                                    self.trackLength*2, self.wallHeight, facing="left", fixedColor=0.4,
+                                                    texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
+        entire_Wall_Node.addGeom(entire_Right_Wall)
 
+        self.render.attachNewNode(entire_Wall_Node)
 
         # Make a copy of the walls and floor at the end of the maze. This makes it look like it goes on further
         node = GeomNode('copy_parent')
