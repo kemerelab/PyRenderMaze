@@ -19,7 +19,6 @@ def makePlane(cx, cy, cz, width, height, facing="left", fixedColor=0.25,
     w_2 = width/2
     h_2 = height/2
 
-
     # Picture to have in mind:
     #
     #   3 ------ 4
@@ -96,7 +95,6 @@ def makePlane(cx, cy, cz, width, height, facing="left", fixedColor=0.25,
 
     return wall
 
-
 # helper function to make a vertical cylinder given center, radius, and height
 def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
                  texHScaling=1.0, texVScaling=1.0, fixedColor=0.25):
@@ -121,7 +119,6 @@ def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
             vertex.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), cz + height/2)
         else:
             raise(ValueError("Cylinder facing direction unknown. ({})".forward(facing)))
-
 
         vertexNormals.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), 0)
         vertexNormals.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), 0)

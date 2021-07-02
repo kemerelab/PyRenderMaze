@@ -9,7 +9,7 @@ from direct.task.Task import Task
 # GUI
 from direct.gui.DirectGui import *
 from panda3d.core import loadPrcFileData
-
+from direct.gui.OnscreenImage import OnscreenImage
 # Utilities
 import zmq
 import numpy as np
@@ -22,7 +22,7 @@ from ParametricShapes import makeCylinder, makePlane
 # Globally change window title name
 windowTitle = "Linear Environment"
 # loadPrcFileData("", "fullscreen true")
-
+FPS = 60
 # You can't normalize inline so this is a helper function
 def normalized(*args):
     myVec = LVector3(*args)
@@ -30,6 +30,10 @@ def normalized(*args):
     return myVec
 
 class App(ShowBase):
+    globalClock = ClockObject.getGlobalClock()
+    globalClock.setFrameRate(FPS)
+    flicker = True
+    
     selectedTrack = "test.track"
     currentState = None
     printStatements = True
@@ -124,6 +128,7 @@ class App(ShowBase):
         # walls_node.setTwoSided(True)
 
         self.initTrack(trackConfig.get('TrackFeatures', None))
+        self.taskMgr.add(self.initFrameTracker, "InitFrameTracker")
 
         # base.setBackgroundColor(0, 0, 0)  # set the background color to black
         self.fog = Fog('distanceFog')
@@ -218,11 +223,6 @@ class App(ShowBase):
                     if 'RotateTexture' in feature:
                         wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
 
-            # BIG TODO - add in sgments of default color featureless wall between the labeled sections.
-            #          - we can do this in the YAML file, but it seems cleaner to have it done automatically.
-            #          - need a function to (1) check that bounds never overlap, and (2) find residual
-            #            segment boundaries
-
         else:
             # Default walls - light gray. Height could be parametric. These will fill any unspecified gaps
             snode = GeomNode('default_walls')
@@ -237,11 +237,11 @@ class App(ShowBase):
             walls = maze_parent.attachNewNode(snode)
 
         entire_Wall_Node = GeomNode('entire_walls')
-        entire_Left_Wall = makePlane(-self.wallDistance-0.01, center, self.trackVPos + self.wallHeight/2, 
+        entire_Left_Wall = makePlane(-self.wallDistance-0.001, center, self.trackVPos + self.wallHeight/2, 
                                                     self.trackLength*2, self.wallHeight, facing="right", fixedColor=0.4,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
         entire_Wall_Node.addGeom(entire_Left_Wall)
-        entire_Right_Wall = makePlane(self.wallDistance+0.01, center, self.trackVPos + self.wallHeight/2, 
+        entire_Right_Wall = makePlane(self.wallDistance+0.001, center, self.trackVPos + self.wallHeight/2, 
                                                     self.trackLength*2, self.wallHeight, facing="left", fixedColor=0.4,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
         entire_Wall_Node.addGeom(entire_Right_Wall)
@@ -253,11 +253,16 @@ class App(ShowBase):
         maze_geometry_copy_parent = self.render.attachNewNode(node)
         second_maze = maze_parent.copyTo(maze_geometry_copy_parent)
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
-            
-        # alight = AmbientLight('alight')
-        # alight.setColor((1, 1, 1, 1))
-        # alnp = self.render.attachNewNode(alight)
-        # self.render.setLight(alnp)
+        
+    def initFrameTracker(self, task):
+        self.flicker ^= True
+        flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1)
+        left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.75), scale=0.05, color=flicker) 
+        right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.75), scale=0.05, color=flicker) 
+        
+        print(self.globalClock.getFrameTime())
+
+        return Task.cont
 
     def createKeyControls(self):
             functionToKeys = {
