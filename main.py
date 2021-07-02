@@ -28,10 +28,10 @@ from ParametricShapes import makeCylinder, makePlane
 windowTitle = "Linear Environment"
 loadPrcFileData("", f"window-title {windowTitle}")
 
-# display = Xlib.display.Display()
-# root = display.screen(0).root # TODO: Handle multiple screens with different resolution
-# desktop = root.get_geometry()
-# loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
+display = Xlib.display.Display()
+root = display.screen(0).root # TODO: Handle multiple screens with different resolution
+desktop = root.get_geometry()
+loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
 # loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
 
 # You can't normalize inline so this is a helper function
@@ -49,35 +49,6 @@ class App(ShowBase):
     posY = 0.0
     posZ = 0.0
 
-    # The trackLength corresponds to a virtual thing. The height of the track
-    #  should correspond to the physical height of the wheel because the running
-    #  behavior is supposed to correspond with running on the virtual track.
-    trackVPos = 0 # This means the track is centered on the "virtual center" of
-                  # the screen. We'll adjust to offset the monitor later.
-
-    # To get the screen set up properly, we will want to define an off-axis camera.
-    # Later on, we'll call "setFilmOffset(hor,ver)"  to adjust it. This requires
-    #   defining the "film size". We adopt the model that our screen is actually the
-    #   same size as the film - that simplifies everything. The cameras will look
-    #   either forward or 90 degrees to either side (a box, though we could do other
-    #   angles if desired!). Without offsets, the center of each screen corresponds
-    #   to the mouse's eye's view (we'll abstract their binocular vision to a single
-    #   cyclops-like eye). 
-
-    #   Let's start by defining the camera height (mouse's eye position) relative to 0,
-    #     where 0 means the center of the screen.
-    mouseHeight = 3 # The mouse's eye position relative to the top of the wheel
-    camHeight = trackVPos + mouseHeight # The mouse is a little bit above the wheel
-
-    #   Next, let's describe the size of the screen in terms of the field of view
-    screenWidth, screenHeight = 51, 29 # 29.376, 16.524
-    screenDistance = 20 # needed to calculate FOV
-    fov_h = math.atan2(screenWidth/2, screenDistance)*2 / math.pi * 180
-    fov_v = math.atan2(screenHeight/2, screenDistance)*2 / math.pi * 180
-
-    #   Finally, let's describe the offset of the screen from center
-    screenHOffset, screenVOffset = 0, 10
-
     # In order to provide motion cues, we define a large cylinder to hold a background
     # texture. The goal is that the wall of this cylinder is far enough from the mouse,
     # and the texture it carries is complex enough that they get a dynamic motion cue 
@@ -87,8 +58,12 @@ class App(ShowBase):
     # Use cm as units
     trackWidth = 15 # This is actually how wide our running wheel is
 
-    # Let's place the virtual side walls on the physical monitor location
-    wallDistance = screenDistance
+    # The trackLength corresponds to a virtual thing. The height of the track
+    #  should correspond to the physical height of the wheel because the running
+    #  behavior is supposed to correspond with running on the virtual track.
+    trackVPos = 0 # 0 means the track is centered on the "virtual center" of 
+                    # the screen. We'll adjust to offset the monitor later.
+
 
     def __init__(self):
         ShowBase.__init__(self)
@@ -96,42 +71,139 @@ class App(ShowBase):
         self.paused = False
         self.gameOverTime = 0 #for camera
 
-        fileName="example-mazes/example1.yaml"
+        fileName="example-mazes/example_multiview.yaml"
         # Read YAML file
         with open(fileName, 'r') as stream:
             self.trackConfig = yaml.safe_load(stream)
 
         print(self.trackConfig)
         self.trackLength = self.trackConfig.get('TrackLength', 240)
-        self.wallHeight = self.trackConfig.get('wallHeight', 20)
+        self.wallHeight = self.trackConfig.get('WallHeight', 20)
+        self.wallDistance = self.trackConfig.get('WallDistance', 24) # Ideally this is equal to the screen distances on the sides
 
-        # Init camera
-        self.camConfigDefault = "perspective"
-        self.camConfig = self.camConfigDefault
-        self.taskMgr.add(self.setCameraToPlayer, "SetCameraToPlayer")
 
-        lens = PerspectiveLens()
-        lens.setFov(self.fov_h, self.fov_v)
-        # lens.setAspectRatio(1.77) # 16:9
-        lens.setFilmSize(self.screenWidth) # in cm
-        lens.setFilmOffset(self.screenHOffset, self.screenVOffset) # offset in cm
+        # For the proper VR perspective, we need to define the mouse's eye position.
+        #   Because we are only using 2D displays, we'll assume they are a cyclops.
+        #   Our "cameras" are just different views from the eye of the world.
+        self.mouseHeight = self.trackConfig.get('MouseEyeHeight', 3) # The mouse's eye position relative to the top of the wheel
+        self.cameraHeight = self.trackVPos + self.mouseHeight # The height of the eye/camera relative to 0
 
-        lens.setNear(1)
-        lens.setFar(5000.0)
-        self.cam.node().setLens(lens)
+        ### Set up whether this will be 1 screen or multiple screens
+        display_config = self.trackConfig.get('DisplayConfig',None)
+        if not display_config:
+            self.n_views = 1
+            self.use_separate_windows = False
+            self.camera_view_angles = [0]
+            self.display_regions = [[0, 1, 0, 1]]
+
+            # Physical geometry and placement of the screen
+            self.screen_width, screenHeight = [51], 29 # 29.376, 16.524
+            self.screenDistance = [20] # needed to calculate FOV
+            # Let's describe the shape of the screen in terms of the field of view
+            fov_h = math.atan2(self.screen_width[0]/2, self.screenDistance[0])*2 / math.pi * 180
+            fov_v = math.atan2(screenHeight/2, self.screenDistance[0])*2 / math.pi * 180
+            self.fov_h_v = [[fov_h, fov_v]]
+
+            #   Finally, let's describe the offset of the screen from center
+            self.screen_h_v_offsets = [[0, 10]] # cm
+        else:
+            self.n_views = display_config.get('NViews', 1)
+            self.use_separate_windows = display_config.get('UseSeparateWindows', False)
+            self.camera_view_angles = display_config.get('ViewAngles', [0])
+            if len(self.camera_view_angles) != self.n_views:
+                raise(ValueError('Must specify one camera view angle for each view.'))
+            if self.use_separate_windows:
+                default_display_regions = [[0,1,0,1]]*self.n_views
+                self.display_regions = display_config.get('DisplayRegions', default_display_regions)
+            else:
+                self.display_regions = display_config.get('DisplayRegions', [[0,1,0,1]])
+            if len(self.display_regions) != self.n_views:
+                raise(ValueError('Must specify one display region for each view.'))
+
+            # Physical geometry and placement of the screen(s)
+            widths_and_heights = display_config.get('MonitorSizes', [[51, 29]]*self.n_views)
+            if len(widths_and_heights) != self.n_views:
+                raise(ValueError('Must specify physical sizes of each display.'))
+            distances = display_config.get('MonitorDistances', [24]*self.n_views)
+            if len(distances) != self.n_views:
+                raise(ValueError('Must specify distance from eye to each display.'))
+            self.screen_h_v_offsets = display_config.get('MonitorOffsets', [[0,0]]*self.n_views)
+
+            self.screen_width = []
+            self.fov_h_v = []
+            for n in range(self.n_views):
+                width, height = widths_and_heights[n]
+                self.screen_width.append(width)
+                # Let's describe the shape of the screen in terms of the field of view
+                fov_h = math.atan2(width/2, distances[n])*2 / math.pi * 180
+                fov_v = math.atan2(height/2, distances[n])*2 / math.pi * 180
+                self.fov_h_v.append([fov_h, fov_v])
+
+        self.cameras = []
+        # Set up view(s)
+        for n in range(self.n_views):
+            if (n > 0):
+                if self.use_separate_windows:
+                    window_properties = WindowProperties()
+                    window_properties.setSize(800, 600)
+                    window_properties.setTitle('win2')
+                    self.second_view = base.openWindow(props=window_properties, keepCamera=False, makeCamera=True, requireWindow=True)
+
+                    # mk = base.dataRoot.attachNewNode(MouseAndKeyboard(self.second_view, 0, 'w2mouse'))
+                    # bt = mk.attachNewNode(ButtonThrower('w2mouse'))
+                    # mods = ModifierButtons()
+                    # mods.addButton(KeyboardButton.shift())
+                    # mods.addButton(KeyboardButton.control())
+                    # mods.addButton(KeyboardButton.alt())
+                    # bt.node().setModifierButtons(mods)
+
+                else:
+                    new_dr = base.win.makeDisplayRegion(*self.display_regions[n])
+                    print(self.display_regions[n])
+                    new_dr.setClearColor(VBase4(0, 0, 0, 1))
+                    new_dr.setClearColorActive(True)
+                    new_dr.setClearDepthActive(True)
+
+                    new_cam = Camera('cam{}'.format(n))
+                    current_cam_node = self.render.attachNewNode(new_cam)
+                    new_dr.setCamera(current_cam_node)
+                    # self.camera.setHpr(90, 0, 0)
+
+                    self.cameras.append(current_cam_node)
+            else:
+                if not self.use_separate_windows:
+                    current_cam_node = self.cam
+                    self.cam.node().getDisplayRegion(0).setDimensions(*self.display_regions[n])
+                self.cameras.append(self.cam)
+
+            # The definition of the "Lens" is where the magic of VR happens. In order for things
+            #   to have the perceptually correct size and shapes, we need to know the physical
+            #   geometry of the display(s) that are being used.
+            # To get the screen set up properly, we will want to define an off-axis camera.
+            #   we'll call "setFilmOffset(hor,ver)"  to adjust it. This requires
+            #   defining the "film size". We adopt the model that our screen is actually the
+            #   same size as the film - that simplifies everything. The cameras will look
+            #   either forward or 90 degrees to either side (a box, though we could do other
+            #   angles if desired!). Without offsets, the center of each screen corresponds
+            #   to the mouse's eye's view (we'll abstract their binocular vision to a single
+            #   cyclops-like eye). 
+
+            current_cam_node.setH(self.camera_view_angles[n])
+            lens = PerspectiveLens()
+            lens.setFov(*self.fov_h_v[n])
+            # lens.setAspectRatio(1.77) # 16:9
+            lens.setFilmSize(self.screen_width[n]) # in cm
+            lens.setFilmOffset(*self.screen_h_v_offsets[n]) # offset in cm
+
+            lens.setNear(1)
+            lens.setFar(5000.0)
+            current_cam_node.node().setLens(lens)
+
 
         self.maze_geometry_root = None
         self.maze_geometry_root = self.init_track(self.trackConfig.get('TrackFeatures', None))
 
         base.setBackgroundColor(0, 0, 0)  # set the background color to black
-
-        # Key movement
-        self.isKeyDown = {}
-        self.createKeyControls()
-
-        # if (self.playerMode):
-        self.taskMgr.add(self.keyPressHandler, "KeyPressHandler")
-        # else:
 
         # Init ZMQ connection to server
         port = "8556"
@@ -140,7 +212,7 @@ class App(ShowBase):
         self.socket = context.socket(zmq.SUB)
         if self.printStatements:
             print("Collecting updates from keyboard server...")
-        self.socket.connect ("tcp://localhost:%s" % port)
+        self.socket.connect ("tcp://10.129.151.168:%s" % port)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
         self.poller = zmq.Poller()
         self.poller.register(self.socket, zmq.POLLIN)
@@ -148,22 +220,9 @@ class App(ShowBase):
         self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
 
 
-        window_properties = WindowProperties()
-        window_properties.setSize(800, 600)
-        window_properties.setTitle('win2')
-        self.second_view = base.openWindow(props=window_properties, keepCamera=False, makeCamera=True, requireWindow=True)
-        self.cam2 = base.camList[-1]
-        self.camera = base.camList[0]
-        print(self.camera, base.camList)
+        self.accept('escape', self.exit_fun)
 
-        mk = base.dataRoot.attachNewNode(MouseAndKeyboard(self.second_view, 0, 'w2mouse'))
-        bt = mk.attachNewNode(ButtonThrower('w2mouse'))
-        mods = ModifierButtons()
-        mods.addButton(KeyboardButton.shift())
-        mods.addButton(KeyboardButton.control())
-        mods.addButton(KeyboardButton.alt())
-        bt.node().setModifierButtons(mods)
-
+        base.setFrameRateMeter(True)
 
 
 
@@ -278,7 +337,13 @@ class App(ShowBase):
         maze_geometry_copy_parent = maze_geometry_root.attachNewNode(node)
         second_maze = track_parent.copyTo(maze_geometry_copy_parent)
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
-            
+
+
+        # region = self.win.makeDisplayRegion(0,0,0.5,1))
+        # camNode = Camera('cam')
+        # camNP = NodePath(camNode)
+        # region.setCamera(camNP)
+        # camNP.reparentTo(self.cam)     
         # alight = AmbientLight('alight')
         # alight.setColor((1, 1, 1, 1))
         # alnp = self.render.attachNewNode(alight)
@@ -286,84 +351,9 @@ class App(ShowBase):
 
         return maze_geometry_root
 
-    def createKeyControls(self):
-            functionToKeys = {
-                "forward": [ "arrow_up", "w" ],     
-                "backward": [ "arrow_down", "s" ],
-            }
-
-            for fn in functionToKeys:
-                keys = functionToKeys[fn]
-
-                # Initialise dictionary
-                self.isKeyDown[fn] = 0
-
-                for key in keys:
-                    # Key Down
-                    self.accept(key, self.setKeyDown, [fn, 1])
-                    # Key Up
-                    self.accept(key+"-up", self.setKeyDown, [fn, -1])
-
-            keyReleaseMap = [
-                (self.exit_fun, ["escape"], None),
-                (self.remove_model, ["x"], None),
-                (self.draw_model, ["m"], None),
-                (self.setCameraView, ["1"], ["perspective"]),
-                (self.setCameraView, ["2"], ["lookingLeft"]),
-                (self.setCameraView, ["3"], ["lookingRight"]),
-            ]
-
-            for fn, keys, args in keyReleaseMap:
-                for key in keys:
-                    if isinstance(args, list) and len(args) > 0:
-                        self.accept(key+"-up", fn, args)
-                    else:
-                        self.accept(key+"-up", fn)
-
     def exit_fun(self):
         print('Exit called')
         sys.exit()
-
-    def setKeyDown(self, key, value):
-        self.isKeyDown[key] += value
-        if self.isKeyDown[key] < 0:
-            self.isKeyDown[key] = 0
-
-    def setCameraToPlayer(self, task):
-        if self.camConfig == "lookingLeft":
-            self.camera.setHpr(90, 0, 0)
-        elif self.camConfig == "lookingRight":
-            self.camera.setHpr(-90, 0, 0)
-        else: # looking straight ahead
-            # self.camera.setHpr(0, 0, 0)
-            pass
-
-        self.camera.setPos(self.posX, self.posY, self.posZ + self.camHeight)
-        self.cam2.setPos(self.posX, self.posY, self.posZ + self.camHeight)
-        # self.camera.setPos(self.posX + xOffset, (self.posY) % self.racetrack.treadmillLength, self.posZ + camHeight)
-
-        return Task.cont
-
-    def setCameraView(self, view):
-        self.camConfig = view
-
-    def keyPressHandler(self, task):
-        flag = False
-        if self.isKeyDown["forward"] > 0:
-            self.posY += 1
-            if (self.posY >= self.trackLength):
-                self.posY = 0
-            flag = True
-        if self.isKeyDown["backward"] > 0:
-            self.posY -= 1
-            if (self.posY < 0):
-                self.posY = self.trackLength
-            flag = True
-            
-        if self.printStatements and flag:
-            print(self.camera.getPos())
-            
-        return Task.cont
 
     def readMsgs(self, task):
         posY = self.posY
@@ -379,6 +369,10 @@ class App(ShowBase):
         if posY != self.posY:
             self.posY = posY
             print(self.posY)
+
+        for c in self.cameras:
+            c.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
+        # self.cam2.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
 
         return Task.cont
 
