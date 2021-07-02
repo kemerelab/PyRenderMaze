@@ -33,7 +33,7 @@ class App(ShowBase):
     globalClock = ClockObject.getGlobalClock()
     globalClock.setFrameRate(FPS)
     flicker = True
-    
+
     selectedTrack = "test.track"
     currentState = None
     printStatements = True
@@ -178,9 +178,6 @@ class App(ShowBase):
         floor_node = maze_parent.attachNewNode(snode)
         floor_node.setTexture(noise) # The fiberglass wheel has a noise-like texture. Its more like cross hatching, but that's ok for now
 
-        # if self.printStatements:
-        #     print("i: -1",  "startPoint: ",  points[0]-100, "endPoint: ", 250)
-
         if trackFeatures:
             for featureName, feature in trackFeatures.items():
                 if feature.get('Type') == 'Wall':
@@ -256,11 +253,10 @@ class App(ShowBase):
         
     def initFrameTracker(self, task):
         self.flicker ^= True
-        flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1)
+        flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
         left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.75), scale=0.05, color=flicker) 
         right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.75), scale=0.05, color=flicker) 
-        
-        print(self.globalClock.getFrameTime())
+        avg_fps = OnscreenText(text=" framerate: " + str(round(self.globalClock.getAverageFrameRate())) + " fps", pos=(1.03, 0.90), scale=0.07, bg=(0.3, 0.3, 0.4, 1), fg=(255, 255, 255, 1))
 
         return Task.cont
 
