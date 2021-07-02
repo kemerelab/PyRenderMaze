@@ -36,7 +36,7 @@ class App(ShowBase):
 
     selectedTrack = "test.track"
     currentState = None
-    printStatements = True
+    printStatements = False
     playerMode = True #if false, using replay zmq
     posX = 0.0
     posY = 0.0
@@ -252,12 +252,11 @@ class App(ShowBase):
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
         
     def initFrameTracker(self, task):
-        self.flicker ^= True
+        self.flicker ^= True 
         flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
         left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.75), scale=0.05, color=flicker) 
         right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.75), scale=0.05, color=flicker) 
         avg_fps = OnscreenText(text=" framerate: " + str(round(self.globalClock.getAverageFrameRate())) + " fps", pos=(1.03, 0.90), scale=0.07, bg=(0.3, 0.3, 0.4, 1), fg=(255, 255, 255, 1))
-
         return Task.cont
 
     def createKeyControls(self):
