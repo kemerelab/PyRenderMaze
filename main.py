@@ -128,7 +128,7 @@ class App(ShowBase):
         # walls_node.setTwoSided(True)
 
         self.initTrack(trackConfig.get('TrackFeatures', None))
-        self.taskMgr.add(self.initFrameTracker, "InitFrameTracker")
+        self.taskMgr.doMethodLater(1, self.initFrameTracker, "InitFrameTracker")
 
         # base.setBackgroundColor(0, 0, 0)  # set the background color to black
         self.fog = Fog('distanceFog')
@@ -242,7 +242,6 @@ class App(ShowBase):
                                                     self.trackLength*2, self.wallHeight, facing="left", fixedColor=0.4,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
         entire_Wall_Node.addGeom(entire_Right_Wall)
-
         self.render.attachNewNode(entire_Wall_Node)
 
         # Make a copy of the walls and floor at the end of the maze. This makes it look like it goes on further
@@ -256,8 +255,19 @@ class App(ShowBase):
         flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
         left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.75), scale=0.05, color=flicker) 
         right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.75), scale=0.05, color=flicker) 
+        
+        
+        # flicker = 0.0 if self.flicker else 1.0
+        # frameSyncNode = GeomNode('frameSync')
+        # leftMonitor = makePlane(-10, 10, 0, 5, 5, facing="front", fixedColor=flicker)
+        # frameSyncNode.addGeom(leftMonitor)
+
+        # rightMonitor = makePlane(10, 10, 0, 5, 5, facing="front", fixedColor=flicker)
+        # frameSyncNode.addGeom(rightMonitor)
+        # self.camera.attachNewNode(frameSyncNode)
+
         avg_fps = OnscreenText(text=" framerate: " + str(round(self.globalClock.getAverageFrameRate())) + " fps", pos=(1.03, 0.90), scale=0.07, bg=(0.3, 0.3, 0.4, 1), fg=(255, 255, 255, 1))
-        return Task.cont
+        return Task.again
 
     def createKeyControls(self):
             functionToKeys = {
