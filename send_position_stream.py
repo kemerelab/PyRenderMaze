@@ -16,7 +16,7 @@ socket = context.socket(zmq.PUB)
 socket.bind("tcp://*:%s" % port)
 
 data = np.load('ExampleData.npy')
-idx = 0
+idx = 10000
 k = 0
 # print(data.dtype, data.shape)
 

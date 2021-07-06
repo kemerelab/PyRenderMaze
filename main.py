@@ -73,7 +73,7 @@ class App(ShowBase):
         self.paused = False
         self.gameOverTime = 0 #for camera
 
-        fileName="example-mazes/example_multiview.yaml"
+        fileName="example-mazes/example_teleport.yaml"
         # Read YAML file
         with open(fileName, 'r') as stream:
             self.trackConfig = yaml.safe_load(stream)
@@ -293,12 +293,32 @@ class App(ShowBase):
                                                     length, self.wallHeight, facing="right", fixedColor=0.5,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
-                    wall_segment = track_parent.attachNewNode(snode)
+                    if feature.get('DuplicateForward', True):
+                        wall_segment = track_parent.attachNewNode(snode)
+                    else:
+                        wall_segment = maze_geometry_root.attachNewNode(snode)
                     tex = loader.loadTexture(feature['Texture'])
                     wall_segment.setTexture(tex)
                     if 'RotateTexture' in feature:
                         wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
-
+                elif feature.get('Type') == 'Plane':
+                    snode = GeomNode(featureName)
+                    width = feature.get('Width')
+                    height = feature.get('Height')
+                    texScale = feature.get('TextureScaling', 1.0)
+                    plane = makePlane(feature.get('XPos', 0), feature.get('YPos', 0), feature.get('ZPos', 0), 
+                                                    width, feature.get('Height'), facing=feature.get('Facing'),
+                                                    fixedColor=0.75,texHScaling=width/height*texScale, texVScaling=texScale)
+                    snode.addGeom(plane)
+                    if feature.get('DuplicateForward', True):
+                        plane_node = track_parent.attachNewNode(snode)
+                    else:
+                        plane_node = maze_geometry_root.attachNewNode(snode)                    
+                    if 'Texture' in feature:
+                        tex = loader.loadTexture(feature['Texture'])
+                        wall_segment.setTexture(tex)
+                        if 'RotateTexture' in feature:
+                            wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
@@ -315,7 +335,11 @@ class App(ShowBase):
                                                             self.trackVPos, r, h, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
-                    cylinder_node = track_parent.attachNewNode(snode)
+                    if feature.get('DuplicateForward', True):
+                        cylinder_node = track_parent.attachNewNode(snode)
+                    else:
+                        cylinder_node = maze_geometry_root.attachNewNode(snode)
+                    
                     tex = loader.loadTexture(feature['Texture'])
                     cylinder_node.setTexture(tex)
                     if 'RotateTexture' in feature:
@@ -356,15 +380,15 @@ class App(ShowBase):
 
     def readMsgs(self, task):
         posY = self.posY
-        msg_list = self.poller.poll(timeout=1)
-        if msg_list:
+        msg_list = self.poller.poll(timeout=0.5)
+        while msg_list:
             for sock, event in msg_list:
                 if sock == self.data_socket:
                     msg = self.data_socket.recv()
                     self.last_timestamp, posY = struct.unpack('<Ld',msg)
                     if posY != self.posY:
                         self.posY = posY
-                        print(self.posY)
+                        # print(self.posY)
                 elif sock==self.command_socket:
                     msg = self.command_socket.recv()
                     print("Message received: ", msg)
@@ -375,6 +399,7 @@ class App(ShowBase):
                 else:
                     msg = sock.recv()
                     print(msg)
+            msg_list = self.poller.poll(timeout=0.5)
 
 
         for c in self.cameras:
