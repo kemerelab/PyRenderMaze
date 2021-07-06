@@ -380,7 +380,7 @@ class App(ShowBase):
 
     def readMsgs(self, task):
         posY = self.posY
-        msg_list = self.poller.poll(timeout=0.5)
+        msg_list = self.poller.poll(timeout=0.01)
         while msg_list:
             for sock, event in msg_list:
                 if sock == self.data_socket:
@@ -399,7 +399,8 @@ class App(ShowBase):
                 else:
                     msg = sock.recv()
                     print(msg)
-            msg_list = self.poller.poll(timeout=0.5)
+            msg_list = self.poller.poll(timeout=0) # it seems like the whole point of poller
+                                                   # should be to catch all of these, but...
 
 
         for c in self.cameras:
