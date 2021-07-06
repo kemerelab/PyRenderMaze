@@ -20,6 +20,8 @@ import Xlib.display # pip install python-xlib
 
 import sys
 
+import struct
+
 # Local code
 from ParametricShapes import makeCylinder, makePlane
 
@@ -205,17 +207,26 @@ class App(ShowBase):
 
         base.setBackgroundColor(0, 0, 0)  # set the background color to black
 
-        # Init ZMQ connection to server
-        port = "8556"
+        # ZMQ connection to position data server
+        data_socket_port = "8556"
         # Socket to talk to server
         context = zmq.Context()
-        self.socket = context.socket(zmq.SUB)
-        if self.printStatements:
-            print("Collecting updates from keyboard server...")
-        self.socket.connect ("tcp://10.129.151.168:%s" % port)
-        self.socket.setsockopt(zmq.SUBSCRIBE, b"")
+        self.data_socket = context.socket(zmq.SUB)
+        self.data_socket.connect ("tcp://localhost:%s" % data_socket_port)
+        self.data_socket.setsockopt(zmq.SUBSCRIBE, b"")
+
+        # ZMQ server connection for commands
+        command_socket_port = "8557"
+        # Socket to talk to server
+        context = zmq.Context()
+        self.command_socket = context.socket(zmq.SUB)
+        self.command_socket.connect ("tcp://localhost:%s" % command_socket_port)
+        self.command_socket.setsockopt(zmq.SUBSCRIBE, b"")
+
         self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
+        self.poller.register(self.data_socket, zmq.POLLIN)
+        self.poller.register(self.command_socket, zmq.POLLIN)
+
         self.last_timestamp = 0
         self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
 
@@ -223,7 +234,6 @@ class App(ShowBase):
         self.accept('escape', self.exit_fun)
 
         base.setFrameRateMeter(True)
-
 
 
     def remove_model(self):
@@ -338,17 +348,6 @@ class App(ShowBase):
         second_maze = track_parent.copyTo(maze_geometry_copy_parent)
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
 
-
-        # region = self.win.makeDisplayRegion(0,0,0.5,1))
-        # camNode = Camera('cam')
-        # camNP = NodePath(camNode)
-        # region.setCamera(camNP)
-        # camNP.reparentTo(self.cam)     
-        # alight = AmbientLight('alight')
-        # alight.setColor((1, 1, 1, 1))
-        # alnp = self.render.attachNewNode(alight)
-        # self.render.setLight(alnp)
-
         return maze_geometry_root
 
     def exit_fun(self):
@@ -359,20 +358,27 @@ class App(ShowBase):
         posY = self.posY
         msg_list = self.poller.poll(timeout=1)
         if msg_list:
-            for sock, num in msg_list:
-                msg = self.socket.recv()
-                data = np.frombuffer(msg, dtype='int32', count=2)
-                if (data[0] % 1000 == 0):
-                    if self.printStatements: print(data)
-                self.last_timestamp = data[0]
-                posY = (data[1] * math.pi * 20.2 / 8192) % 240
-        if posY != self.posY:
-            self.posY = posY
-            print(self.posY)
+            for sock, event in msg_list:
+                if sock == self.data_socket:
+                    msg = self.data_socket.recv()
+                    self.last_timestamp, posY = struct.unpack('<Ld',msg)
+                    if posY != self.posY:
+                        self.posY = posY
+                        print(self.posY)
+                elif sock==self.command_socket:
+                    msg = self.command_socket.recv()
+                    print("Message received: ", msg)
+                    if msg == b'Reset':
+                        self.draw_model()
+                    elif msg == b'Exit':
+                        self.exit_fun()
+                else:
+                    msg = sock.recv()
+                    print(msg)
+
 
         for c in self.cameras:
             c.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
-        # self.cam2.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
 
         return Task.cont
 
