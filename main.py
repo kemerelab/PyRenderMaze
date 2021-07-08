@@ -18,7 +18,9 @@ import yaml
 
 # Local code
 from ParametricShapes import makeCylinder, makePlane
-
+from pandac.PandaModules import loadPrcFileData
+loadPrcFileData("", "sync-video #f")
+loadPrcFileData("", "show-frame-rate-meter  #t")
 # Globally change window title name
 windowTitle = "Linear Environment"
 # loadPrcFileData("", "fullscreen true")
@@ -31,6 +33,7 @@ def normalized(*args):
 
 class App(ShowBase):
     globalClock = ClockObject.getGlobalClock()
+    globalClock.setMode(ClockObject.MLimited)
     globalClock.setFrameRate(FPS)
     flicker = True
 
@@ -253,9 +256,8 @@ class App(ShowBase):
     def initFrameTracker(self, task):
         self.flicker ^= True 
         flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
-        left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.75), scale=0.05, color=flicker) 
-        right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.75), scale=0.05, color=flicker) 
-        
+        left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.85), scale=0.05, color=flicker) 
+        right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.85), scale=0.05, color=flicker) 
         
         # flicker = 0.0 if self.flicker else 1.0
         # frameSyncNode = GeomNode('frameSync')
@@ -266,7 +268,7 @@ class App(ShowBase):
         # frameSyncNode.addGeom(rightMonitor)
         # self.camera.attachNewNode(frameSyncNode)
 
-        avg_fps = OnscreenText(text=" framerate: " + str(round(self.globalClock.getAverageFrameRate())) + " fps", pos=(1.03, 0.90), scale=0.07, bg=(0.3, 0.3, 0.4, 1), fg=(255, 255, 255, 1))
+        # set `show-frame-rate-meter  #t` in Config.prc
         return Task.cont
 
     def createKeyControls(self):
