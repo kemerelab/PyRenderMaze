@@ -131,8 +131,8 @@ class App(ShowBase):
         # walls_node.setTwoSided(True)
 
         self.initTrack(trackConfig.get('TrackFeatures', None))
-        self.taskMgr.doMethodLater(1, self.initFrameTracker, "InitFrameTracker")
-
+        # self.taskMgr.doMethodLater(0.2, self.initFrameTracker, "InitFrameTracker")
+        self.taskMgr.add(self.initFrameTracker, "InitFrameTracker")
         # base.setBackgroundColor(0, 0, 0)  # set the background color to black
         self.fog = Fog('distanceFog')
         self.fog.setColor(0, 0, 0)
