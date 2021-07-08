@@ -160,6 +160,14 @@ class App(ShowBase):
             self.poller.register(self.socket, zmq.POLLIN)
             self.last_timestamp = 0
             self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
+
+        self.left_monitor_square_black = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.85), scale=0.05, color=(0,0,0,1)) 
+        self.right_monitor_square_black = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.85), scale=0.05, color=(0,0,0,1))
+       
+        self.left_monitor_square_white = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.85), scale=0.05, color=(255,255,255,1)) 
+        self.right_monitor_square_white = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.85), scale=0.05, color=(255,255,255,1)) 
+ 
+
     def initTrack(self, trackFeatures):
         testTexture = loader.loadTexture("textures/numbers.png")
         checkerboard = loader.loadTexture("textures/checkerboard.png")
@@ -254,9 +262,19 @@ class App(ShowBase):
         
     def initFrameTracker(self, task):
         self.flicker ^= True 
-        flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
-        left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.85), scale=0.05, color=flicker) 
-        right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.85), scale=0.05, color=flicker) 
+        # flicker = (0,0,0, 1) if self.flicker  else (255, 255, 255, 1) #flicker between black and white
+        # left_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(-1.25, 0, -.85), scale=0.05, color=flicker) 
+        # right_monitor_square = OnscreenImage(image='frameSquare.jpg', pos=(1.25, 0, -.85), scale=0.05, color=flicker) 
+        if not self.flicker:
+            self.left_monitor_square_white.hide()
+            self.right_monitor_square_white.hide()
+            self.left_monitor_square_black.show()
+            self.right_monitor_square_black.show()            
+        else:
+            self.left_monitor_square_white.show()
+            self.right_monitor_square_white.show()
+            self.left_monitor_square_black.hide()
+            self.right_monitor_square_black.hide()            
         
         # flicker = 0.0 if self.flicker else 1.0
         # frameSyncNode = GeomNode('frameSync')
