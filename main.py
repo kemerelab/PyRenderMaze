@@ -267,7 +267,7 @@ class App(ShowBase):
         # self.camera.attachNewNode(frameSyncNode)
 
         avg_fps = OnscreenText(text=" framerate: " + str(round(self.globalClock.getAverageFrameRate())) + " fps", pos=(1.03, 0.90), scale=0.07, bg=(0.3, 0.3, 0.4, 1), fg=(255, 255, 255, 1))
-        return Task.again
+        return Task.cont
 
     def createKeyControls(self):
             functionToKeys = {
