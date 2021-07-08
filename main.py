@@ -160,7 +160,6 @@ class App(ShowBase):
             self.poller.register(self.socket, zmq.POLLIN)
             self.last_timestamp = 0
             self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
-
     def initTrack(self, trackFeatures):
         testTexture = loader.loadTexture("textures/numbers.png")
         checkerboard = loader.loadTexture("textures/checkerboard.png")
@@ -268,7 +267,6 @@ class App(ShowBase):
         # frameSyncNode.addGeom(rightMonitor)
         # self.camera.attachNewNode(frameSyncNode)
 
-        # set `show-frame-rate-meter  #t` in Config.prc
         return Task.cont
 
     def createKeyControls(self):
