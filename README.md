@@ -1,6 +1,6 @@
 # PyRenderMaze
 
-(C) 2021 by Jiwon Kim and Caleb Kemere
+(C) 2021 by Jiwon Lee and Caleb Kemere
 
 This program is designed to run in concert with the [https://github.com/kemerelab/TreadmillIO] project, which includes
 a hardware interface to a cylindrical treadmill as well as real-time virtual-position-based control of dynamic auditory
