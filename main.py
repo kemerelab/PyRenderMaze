@@ -280,49 +280,43 @@ class App(ShowBase):
 
         if trackFeatures:
             for featureName, feature in trackFeatures.items():
+                fixedColor = feature.get('FixedColor', 0.5)
+                texScale = feature.get('TextureScaling', 1.0)
+
                 if feature.get('Type') == 'Wall':
                     snode = GeomNode(featureName)
                     length = feature['Bounds'][1] - feature['Bounds'][0]
                     center = (feature['Bounds'][1] + feature['Bounds'][0])/2
-                    texScale = feature.get('TextureScaling', 1.0)
-                    right = makePlane(self.wallDistance, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="left", fixedColor=0.5,
+                    x_offset = feature.get('XOffset', 0)
+                    right = makePlane(self.wallDistance + x_offset, center, self.trackVPos + self.wallHeight/2, 
+                                                    length, self.wallHeight, facing="left", fixedColor=fixedColor,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(right)
-                    left = makePlane(-self.wallDistance, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="right", fixedColor=0.5,
+                    left = makePlane(-self.wallDistance - x_offset, center, self.trackVPos + self.wallHeight/2, 
+                                                    length, self.wallHeight, facing="right", fixedColor=fixedColor,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
                     if feature.get('DuplicateForward', True):
-                        wall_segment = track_parent.attachNewNode(snode)
+                        node = track_parent.attachNewNode(snode)
                     else:
-                        wall_segment = maze_geometry_root.attachNewNode(snode)
-                    tex = loader.loadTexture(feature['Texture'])
-                    wall_segment.setTexture(tex)
-                    if 'RotateTexture' in feature:
-                        wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
+                        node = maze_geometry_root.attachNewNode(snode)
+
                 elif feature.get('Type') == 'Plane':
                     snode = GeomNode(featureName)
                     width = feature.get('Width')
                     height = feature.get('Height')
-                    texScale = feature.get('TextureScaling', 1.0)
                     plane = makePlane(feature.get('XPos', 0), feature.get('YPos', 0), feature.get('ZPos', 0), 
                                                     width, feature.get('Height'), facing=feature.get('Facing'),
-                                                    fixedColor=0.75,texHScaling=width/height*texScale, texVScaling=texScale)
+                                                    fixedColor=fixedColor,texHScaling=width/height*texScale, texVScaling=texScale)
                     snode.addGeom(plane)
                     if feature.get('DuplicateForward', True):
-                        plane_node = track_parent.attachNewNode(snode)
+                        node = track_parent.attachNewNode(snode)
                     else:
-                        plane_node = maze_geometry_root.attachNewNode(snode)                    
-                    if 'Texture' in feature:
-                        tex = loader.loadTexture(feature['Texture'])
-                        wall_segment.setTexture(tex)
-                        if 'RotateTexture' in feature:
-                            wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
+                        node = maze_geometry_root.attachNewNode(snode)                    
+
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
-                    texScale = feature.get('TextureScaling', 1.0)
                     snode = GeomNode(featureName)
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YLocation'), 
@@ -336,14 +330,15 @@ class App(ShowBase):
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
                     if feature.get('DuplicateForward', True):
-                        cylinder_node = track_parent.attachNewNode(snode)
+                        node = track_parent.attachNewNode(snode)
                     else:
-                        cylinder_node = maze_geometry_root.attachNewNode(snode)
+                        node = maze_geometry_root.attachNewNode(snode)
                     
+                if 'Texture' in feature:
                     tex = loader.loadTexture(feature['Texture'])
-                    cylinder_node.setTexture(tex)
+                    node.setTexture(tex)
                     if 'RotateTexture' in feature:
-                        wall_segment.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
+                        node.setTexRotate(TextureStage.getDefault(), feature['RotateTexture'])
 
             # BIG TODO - add in sgments of default color featureless wall between the labeled sections.
             #          - we can do this in the YAML file, but it seems cleaner to have it done automatically.

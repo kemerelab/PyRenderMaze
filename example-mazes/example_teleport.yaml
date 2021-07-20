@@ -1,6 +1,7 @@
 # Yaml descriptor of an example maze
 TrackLength: 240
 WallHeight: 20
+WallDistance: 15
 
 DisplayConfig:
   NViews: 1
@@ -11,25 +12,34 @@ DisplayConfig:
   MonitorOffsets: [ [0, 10] ]
 
 TrackFeatures:
+  Segment0:
+    Type: 'Wall'
+    Bounds: [0,240]
+    XOffset: 0.01
+    FixedColor: 0.25
   Segment1:
     Type: 'Wall'
     Bounds: [0,30]
     Texture: 'textures/checkerboard.png'
+    FixedColor: 1
   Segment2:
     Type: 'Wall'
     Bounds: [60,90]
     Texture: 'textures/grating.png'
     TextureScaling: 10
+    FixedColor: 1
   Segment3:
     Type: 'Wall'
     Bounds: [120,150]
     Texture: 'textures/checkerboard.png'
+    FixedColor: 1
   Segment4:
     Type: 'Wall'
     Bounds: [180,210]
     Texture: 'textures/grating.png'
     RotateTexture: 45 # degrees
     TextureScaling: 5
+    FixedColor: 1
   Cylinder1:
     Type: "Cylinder"
     XLocation: "Both"
