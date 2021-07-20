@@ -282,9 +282,9 @@ class App(ShowBase):
             for featureName, feature in trackFeatures.items():
                 fixedColor = feature.get('FixedColor', 0.5)
                 texScale = feature.get('TextureScaling', 1.0)
+                snode = GeomNode(featureName)
 
                 if feature.get('Type') == 'Wall':
-                    snode = GeomNode(featureName)
                     length = feature['Bounds'][1] - feature['Bounds'][0]
                     center = (feature['Bounds'][1] + feature['Bounds'][0])/2
                     x_offset = feature.get('XOffset', 0)
@@ -296,28 +296,18 @@ class App(ShowBase):
                                                     length, self.wallHeight, facing="right", fixedColor=fixedColor,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
-                    if feature.get('DuplicateForward', True):
-                        node = track_parent.attachNewNode(snode)
-                    else:
-                        node = maze_geometry_root.attachNewNode(snode)
 
                 elif feature.get('Type') == 'Plane':
-                    snode = GeomNode(featureName)
                     width = feature.get('Width')
                     height = feature.get('Height')
                     plane = makePlane(feature.get('XPos', 0), feature.get('YPos', 0), feature.get('ZPos', 0), 
                                                     width, feature.get('Height'), facing=feature.get('Facing'),
                                                     fixedColor=fixedColor,texHScaling=width/height*texScale, texVScaling=texScale)
                     snode.addGeom(plane)
-                    if feature.get('DuplicateForward', True):
-                        node = track_parent.attachNewNode(snode)
-                    else:
-                        node = maze_geometry_root.attachNewNode(snode)                    
 
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
-                    snode = GeomNode(featureName)
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YLocation'), 
                                                             self.trackVPos, r, h, texHScaling=texScale, 
@@ -329,11 +319,12 @@ class App(ShowBase):
                                                             self.trackVPos, r, h, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
-                    if feature.get('DuplicateForward', True):
-                        node = track_parent.attachNewNode(snode)
-                    else:
-                        node = maze_geometry_root.attachNewNode(snode)
-                    
+
+                if feature.get('DuplicateForward', True):
+                    node = track_parent.attachNewNode(snode)
+                else:
+                    node = maze_geometry_root.attachNewNode(snode)
+
                 if 'Texture' in feature:
                     tex = loader.loadTexture(feature['Texture'])
                     node.setTexture(tex)
