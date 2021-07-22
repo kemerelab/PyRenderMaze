@@ -1,6 +1,7 @@
 # Core imports
 from panda3d.core import *
 from direct.showbase.ShowBase import ShowBase
+from direct.gui.OnscreenText import OnscreenText
 # Task managers
 from direct.task.Task import Task
 # GUI
@@ -11,8 +12,11 @@ import zmq
 import numpy as np
 import math
 import yaml
+import pickle
 
 import sys
+from subprocess import check_output
+
 
 import struct
 
@@ -38,6 +42,7 @@ with open(maze_config_filename, "r") as stream:
 
 class App(ShowBase):
     printStatements = True
+    IP_address_text = None # Will use to display IP address
     posX = 0.0
     posY = 0.0
     posZ = 0.0
@@ -60,21 +65,11 @@ class App(ShowBase):
 
     def __init__(self, display_config={}, maze_config={}):
         ShowBase.__init__(self)
-
-        self.paused = False
-        self.gameOverTime = 0 #for camera
-
-        self.trackConfig = maze_config
-
-        self.trackLength = self.trackConfig.get('TrackLength', 240)
-        self.wallHeight = self.trackConfig.get('WallHeight', 20)
-        self.wallDistance = self.trackConfig.get('WallDistance', 24) # Ideally this is equal to the screen distances on the sides
-
-
+        
         # For the proper VR perspective, we need to define the mouse's eye position.
         #   Because we are only using 2D displays, we'll assume they are a cyclops.
         #   Our "cameras" are just different views from the eye of the world.
-        self.mouseHeight = self.trackConfig.get('MouseEyeHeight', 3) # The mouse's eye position relative to the top of the wheel
+        self.mouseHeight = display_config.get('MouseEyeHeight', 3) # The mouse's eye position relative to the top of the wheel
         self.cameraHeight = self.trackVPos + self.mouseHeight # The height of the eye/camera relative to 0
 
         ### Support multiple views of the maze 
@@ -158,7 +153,9 @@ class App(ShowBase):
 
 
         self.maze_geometry_root = None
-        self.maze_geometry_root = self.init_track(self.trackConfig.get('TrackFeatures', None))
+
+
+        self.maze_geometry_root = self.init_track(maze_config)
 
         base.setBackgroundColor(0, 0, 0)  # set the background color to black
 
@@ -170,13 +167,17 @@ class App(ShowBase):
         self.data_socket.connect ("tcp://localhost:%s" % data_socket_port)
         self.data_socket.setsockopt(zmq.SUBSCRIBE, b"")
 
-        # ZMQ server connection for commands
+        # ZMQ server connection for commands. 
+        # We use a DEALER/REP architecture for reliability.
         command_socket_port = "8557"
         # Socket to talk to server
         context = zmq.Context()
-        self.command_socket = context.socket(zmq.SUB)
-        self.command_socket.connect ("tcp://localhost:%s" % command_socket_port)
-        self.command_socket.setsockopt(zmq.SUBSCRIBE, b"")
+        self.command_socket = context.socket(zmq.REP)
+        self.command_socket.bind("tcp://127.0.0.1:%s" % command_socket_port)
+
+        context = zmq.Context()
+        server = context.socket(zmq.REP)
+        server.bind("tcp://*:5555")
 
         self.poller = zmq.Poller()
         self.poller.register(self.data_socket, zmq.POLLIN)
@@ -190,18 +191,26 @@ class App(ShowBase):
 
         base.setFrameRateMeter(True)
 
-
     def remove_model(self):
         if self.maze_geometry_root:
             self.maze_geometry_root.removeNode()
             self.maze_geometry_root = None
+        if self.IP_address_text:
+            self.IP_address_text.destroy()
+            self.IP_address_text = None
     
-    def draw_model(self):
+    def draw_model(self, maze_config):
         if self.maze_geometry_root:
             self.remove_model()
-        self.maze_geometry_root = self.init_track(self.trackConfig.get('TrackFeatures', None))
+        self.maze_geometry_root = self.init_track(maze_config)
 
-    def init_track(self, trackFeatures):
+    def init_track(self, trackConfig):
+        trackFeatures = trackConfig.get('TrackFeatures', None)
+
+        self.trackLength = trackConfig.get('TrackLength', 240)
+        self.wallHeight = trackConfig.get('WallHeight', 20)
+        self.wallDistance = trackConfig.get('WallDistance', 24) # Ideally this is equal to the screen distances on the sides
+
         testTexture = loader.loadTexture("textures/numbers.png")
         checkerboard = loader.loadTexture("textures/checkerboard.png")
         noise = loader.loadTexture("textures/whitenoise.png")
@@ -306,6 +315,13 @@ class App(ShowBase):
             walls = track_parent.attachNewNode(snode)
 
 
+            if not self.IP_address_text:
+                # Render IP address by default
+                IP = check_output(['hostname', '-I']).decode("utf-8","ignore")
+                while len(IP) < 7:
+                    IP = check_output(['hostname', '-I']).decode("utf-8","ignore")
+                self.IP_address_text = OnscreenText(text=IP, pos=(0, 0.75), scale=0.1, align=TextNode.ACenter, fg=[1, 0, 0, 1])
+
 
         # Make a copy of the walls and floor at the end of the maze. This makes it look like it goes on further
         node = GeomNode('track_copy')
@@ -331,11 +347,15 @@ class App(ShowBase):
                         self.posY = posY
                         # print(self.posY)
                 elif sock==self.command_socket:
-                    msg = self.command_socket.recv()
+                    print('Got a command message')
+                    pickled_msg = self.command_socket.recv() # Command Socket Messages are pickled dictionaries
+                    msg = pickle.loads(pickled_msg)
                     print("Message received: ", msg)
-                    if msg == b'Reset':
-                        self.draw_model()
-                    elif msg == b'Exit':
+                    if msg['Command'] == 'NewModel':
+                        self.draw_model(msg.get("MazeConfig", None))
+                        self.command_socket.send(b"NewModelSuccess")
+                    elif msg['Command'] == 'Exit':
+                        self.command_socket.send(b"Exiting")
                         self.exit_fun()
                 else:
                     msg = sock.recv()
@@ -357,6 +377,7 @@ class App(ShowBase):
         self.posY = y
         self.posZ = z
 
-app = App(display_config=display_config, maze_config=maze_config)
+app = App(display_config=display_config)
+# app = App(display_config=display_config, maze_config=maze_config)
 
 app.run()
