@@ -1,13 +1,9 @@
 # Core imports
 from panda3d.core import *
 from direct.showbase.ShowBase import ShowBase
-# Basic intervals
-# from direct.interval.IntervalGlobal import *
-from direct.interval.LerpInterval import *
 # Task managers
 from direct.task.Task import Task
 # GUI
-# from direct.gui.DirectGui import *
 from panda3d.core import loadPrcFileData
 
 # Utilities
@@ -15,8 +11,6 @@ import zmq
 import numpy as np
 import math
 import yaml
-
-import Xlib.display # pip install python-xlib
 
 import sys
 
@@ -26,27 +20,24 @@ import struct
 from ParametricShapes import makeCylinder, makePlane
 
 
+# Read YAML file
+with open("display_config.yaml", 'r') as stream:
+    display_config = yaml.safe_load(stream)
+
 # Globally change window title name
-windowTitle = "Linear Environment"
+windowTitle = "PyRenderMaze"
 loadPrcFileData("", f"window-title {windowTitle}")
 
-display = Xlib.display.Display()
-root = display.screen(0).root # TODO: Handle multiple screens with different resolution
-desktop = root.get_geometry()
-loadPrcFileData("", "win-size {} {}".format(desktop.width, desktop.height))
-# loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
+w, h = display_config.get("WindowSize", (800, 600))
+loadPrcFileData("", "win-size {} {}".format(w, h))
+loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
 
-# You can't normalize inline so this is a helper function
-def normalized(*args):
-    myVec = LVector3(*args)
-    myVec.normalize()
-    return myVec
+maze_config_filename = "example-mazes/example_teleport.yaml"
+with open(maze_config_filename, "r") as stream:
+    maze_config = yaml.safe_load(stream)
 
 class App(ShowBase):
-    selectedTrack = "test.track"
-    currentState = None
     printStatements = True
-    playerMode = True #if false, using replay zmq
     posX = 0.0
     posY = 0.0
     posZ = 0.0
@@ -67,18 +58,14 @@ class App(ShowBase):
                     # the screen. We'll adjust to offset the monitor later.
 
 
-    def __init__(self):
+    def __init__(self, display_config={}, maze_config=None):
         ShowBase.__init__(self)
 
         self.paused = False
         self.gameOverTime = 0 #for camera
 
-        fileName="example-mazes/example_teleport.yaml"
-        # Read YAML file
-        with open(fileName, 'r') as stream:
-            self.trackConfig = yaml.safe_load(stream)
+        self.trackConfig = maze_config
 
-        print(self.trackConfig)
         self.trackLength = self.trackConfig.get('TrackLength', 240)
         self.wallHeight = self.trackConfig.get('WallHeight', 20)
         self.wallDistance = self.trackConfig.get('WallDistance', 24) # Ideally this is equal to the screen distances on the sides
@@ -90,92 +77,60 @@ class App(ShowBase):
         self.mouseHeight = self.trackConfig.get('MouseEyeHeight', 3) # The mouse's eye position relative to the top of the wheel
         self.cameraHeight = self.trackVPos + self.mouseHeight # The height of the eye/camera relative to 0
 
-        ### Set up whether this will be 1 screen or multiple screens
-        display_config = self.trackConfig.get('DisplayConfig',None)
-        if not display_config:
-            self.n_views = 1
-            self.use_separate_windows = False
-            self.camera_view_angles = [0]
-            self.display_regions = [[0, 1, 0, 1]]
+        ### Support multiple views of the maze 
+        # There are two ways that multiple views can be supported: (1) With different display regions within the
+        # same large potentially multi-monitor-spanning window, or (2) With multiple windows, where each X screen
+        # gets its own window. X on the Pi defaults to having one big screen set across multiple monitors, and ironically
+        # it proves difficult to configure it to instantiate multiple screens (back in the day it was hard to convice X to
+        # span windows!). Thus only option (1) is currently supported. For hints towards implementing (2), look at commit
+        #   
+        self.n_views = display_config.get('NViews', 1) # default to one view
+        self.camera_view_angles = display_config.get('ViewAngles', [0]) # default to straight ahead
+        if len(self.camera_view_angles) != self.n_views:
+            raise(ValueError('Must specify one camera view angle for each view.'))
 
-            # Physical geometry and placement of the screen
-            self.screen_width, screenHeight = [51], 29 # 29.376, 16.524
-            self.screenDistance = [20] # needed to calculate FOV
+        self.display_regions = display_config.get('DisplayRegions', [[0,1,0,1]]) # default to full screen
+        if len(self.display_regions) != self.n_views:
+            raise(ValueError('Must specify one display region for each view.'))
+
+        # Physical geometry and placement of the screen(s)
+        widths_and_heights = display_config.get('MonitorSizes', [[51, 29]]*self.n_views) # default to a big, 51x29 cm screen
+        if len(widths_and_heights) != self.n_views:
+            raise(ValueError('Must specify physical sizes of each display.'))
+        distances = display_config.get('MonitorDistances', [24]*self.n_views) # default to 24 cm distance
+        if len(distances) != self.n_views:
+            raise(ValueError('Must specify distance from eye to each display.'))
+        self.screen_h_v_offsets = display_config.get('MonitorOffsets', [[0,0]]*self.n_views) # default to no display center offset
+
+        self.screen_width = []
+        self.fov_h_v = []
+        for n in range(self.n_views):
+            width, height = widths_and_heights[n]
+            self.screen_width.append(width)
             # Let's describe the shape of the screen in terms of the field of view
-            fov_h = math.atan2(self.screen_width[0]/2, self.screenDistance[0])*2 / math.pi * 180
-            fov_v = math.atan2(screenHeight/2, self.screenDistance[0])*2 / math.pi * 180
-            self.fov_h_v = [[fov_h, fov_v]]
-
-            #   Finally, let's describe the offset of the screen from center
-            self.screen_h_v_offsets = [[0, 10]] # cm
-        else:
-            self.n_views = display_config.get('NViews', 1)
-            self.use_separate_windows = display_config.get('UseSeparateWindows', False)
-            self.camera_view_angles = display_config.get('ViewAngles', [0])
-            if len(self.camera_view_angles) != self.n_views:
-                raise(ValueError('Must specify one camera view angle for each view.'))
-            if self.use_separate_windows:
-                default_display_regions = [[0,1,0,1]]*self.n_views
-                self.display_regions = display_config.get('DisplayRegions', default_display_regions)
-            else:
-                self.display_regions = display_config.get('DisplayRegions', [[0,1,0,1]])
-            if len(self.display_regions) != self.n_views:
-                raise(ValueError('Must specify one display region for each view.'))
-
-            # Physical geometry and placement of the screen(s)
-            widths_and_heights = display_config.get('MonitorSizes', [[51, 29]]*self.n_views)
-            if len(widths_and_heights) != self.n_views:
-                raise(ValueError('Must specify physical sizes of each display.'))
-            distances = display_config.get('MonitorDistances', [24]*self.n_views)
-            if len(distances) != self.n_views:
-                raise(ValueError('Must specify distance from eye to each display.'))
-            self.screen_h_v_offsets = display_config.get('MonitorOffsets', [[0,0]]*self.n_views)
-
-            self.screen_width = []
-            self.fov_h_v = []
-            for n in range(self.n_views):
-                width, height = widths_and_heights[n]
-                self.screen_width.append(width)
-                # Let's describe the shape of the screen in terms of the field of view
-                fov_h = math.atan2(width/2, distances[n])*2 / math.pi * 180
-                fov_v = math.atan2(height/2, distances[n])*2 / math.pi * 180
-                self.fov_h_v.append([fov_h, fov_v])
+            fov_h = math.atan2(width/2, distances[n])*2 / math.pi * 180
+            fov_v = math.atan2(height/2, distances[n])*2 / math.pi * 180
+            self.fov_h_v.append([fov_h, fov_v])
 
         self.cameras = []
         # Set up view(s)
         for n in range(self.n_views):
             if (n > 0):
-                if self.use_separate_windows:
-                    window_properties = WindowProperties()
-                    window_properties.setSize(800, 600)
-                    window_properties.setTitle('win2')
-                    self.second_view = base.openWindow(props=window_properties, keepCamera=False, makeCamera=True, requireWindow=True)
+                new_dr = base.win.makeDisplayRegion(*self.display_regions[n])
+                print(self.display_regions[n])
+                new_dr.setClearColor(VBase4(0, 0, 0, 1))
+                new_dr.setClearColorActive(True)
+                new_dr.setClearDepthActive(True)
 
-                    # mk = base.dataRoot.attachNewNode(MouseAndKeyboard(self.second_view, 0, 'w2mouse'))
-                    # bt = mk.attachNewNode(ButtonThrower('w2mouse'))
-                    # mods = ModifierButtons()
-                    # mods.addButton(KeyboardButton.shift())
-                    # mods.addButton(KeyboardButton.control())
-                    # mods.addButton(KeyboardButton.alt())
-                    # bt.node().setModifierButtons(mods)
+                new_cam = Camera('cam{}'.format(n))
+                current_cam_node = self.render.attachNewNode(new_cam)
+                new_dr.setCamera(current_cam_node)
+                # self.camera.setHpr(90, 0, 0)
 
-                else:
-                    new_dr = base.win.makeDisplayRegion(*self.display_regions[n])
-                    print(self.display_regions[n])
-                    new_dr.setClearColor(VBase4(0, 0, 0, 1))
-                    new_dr.setClearColorActive(True)
-                    new_dr.setClearDepthActive(True)
-
-                    new_cam = Camera('cam{}'.format(n))
-                    current_cam_node = self.render.attachNewNode(new_cam)
-                    new_dr.setCamera(current_cam_node)
-                    # self.camera.setHpr(90, 0, 0)
-
-                    self.cameras.append(current_cam_node)
+                self.cameras.append(current_cam_node)
             else:
-                if not self.use_separate_windows:
-                    current_cam_node = self.cam
-                    self.cam.node().getDisplayRegion(0).setDimensions(*self.display_regions[n])
+                current_cam_node = self.cam
+                self.cam.node().getDisplayRegion(0).setDimensions(*self.display_regions[n])
                 self.cameras.append(self.cam)
 
             # The definition of the "Lens" is where the magic of VR happens. In order for things
@@ -402,5 +357,5 @@ class App(ShowBase):
         self.posY = y
         self.posZ = z
 
-app = App()
+app = App(display_config=display_config, maze_config=maze_config)
 app.run()

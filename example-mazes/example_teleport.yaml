@@ -3,14 +3,6 @@ TrackLength: 240
 WallHeight: 20
 WallDistance: 15
 
-DisplayConfig:
-  NViews: 1
-  ViewAngles: [0]
-  DisplayRegions: [  [0, 1, 0, 1] ]
-  MonitorSizes: [ [43, 24]]
-  MonitorDistances: [20]
-  MonitorOffsets: [ [0, 10] ]
-
 TrackFeatures:
   Segment0:
     Type: 'Wall'
