@@ -8,37 +8,38 @@ TrackFeatures:
     Type: 'Wall'
     Bounds: [0,240]
     XOffset: 0.01
-    FixedColor: 0.25
+    Color: [0.25, 0.25, 0.25]
   Segment1:
     Type: 'Wall'
     Bounds: [0,30]
     Texture: 'textures/checkerboard.png'
-    FixedColor: 1
+    Color: [1, 1, 1]
   Segment2:
     Type: 'Wall'
     Bounds: [60,90]
     Texture: 'textures/grating.png'
     TextureScaling: 10
-    FixedColor: 1
+    Color: [1, 1, 1]
   Segment3:
     Type: 'Wall'
     Bounds: [120,150]
     Texture: 'textures/checkerboard.png'
-    FixedColor: 1
+    Color: [1, 1, 1]
   Segment4:
     Type: 'Wall'
     Bounds: [180,210]
     Texture: 'textures/grating.png'
     RotateTexture: 45 # degrees
     TextureScaling: 5
-    FixedColor: 1
+    Color: [1, 1, 1]
   Cylinder1:
     Type: "Cylinder"
     XLocation: "Both"
     YLocation: 135
     Texture: 'textures/checkerboard.png'
     TextureScaling: 10
-    Height: 50 
+    Height: 50
+    Color: [0, 0.5, 0.25]
   RewardScreen:
     Type: 'Plane'
     Facing: 'front'

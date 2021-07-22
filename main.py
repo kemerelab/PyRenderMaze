@@ -58,7 +58,7 @@ class App(ShowBase):
                     # the screen. We'll adjust to offset the monitor later.
 
 
-    def __init__(self, display_config={}, maze_config=None):
+    def __init__(self, display_config={}, maze_config={}):
         ShowBase.__init__(self)
 
         self.paused = False
@@ -210,7 +210,7 @@ class App(ShowBase):
         maze_geometry_root = self.render.attachNewNode(maze_root_node)
 
         room_wall_cylinder = makeCylinder(0, self.trackLength/2, -5*self.roomSize/2, self.roomSize, 10*self.roomSize, 
-                                          facing="inward", texHScaling=12, texVScaling=12, fixedColor=1.0)
+                                          facing="inward", texHScaling=12, texVScaling=12, color=[1.0, 1.0, 1.0])
 
         snode = GeomNode('room_walls')
         snode.addGeom(room_wall_cylinder)
@@ -224,7 +224,7 @@ class App(ShowBase):
 
         # Floor - always the same. Really should make it slightly blue to match wheels
         floor = makePlane(0, self.trackLength/2, self.trackVPos, self.trackWidth, self.trackLength, facing="up", 
-                                    fixedColor=0.1, texHScaling=10, texVScaling=self.trackLength/self.trackWidth*10)
+                                    color=[0.1, 0.1, 0.1], texHScaling=10, texVScaling=self.trackLength/self.trackWidth*10)
         snode = GeomNode('floor')
         snode.addGeom(floor)
         floor_node = track_parent.attachNewNode(snode)
@@ -235,7 +235,7 @@ class App(ShowBase):
 
         if trackFeatures:
             for featureName, feature in trackFeatures.items():
-                fixedColor = feature.get('FixedColor', 0.5)
+                color = feature.get('Color', [0.5, 0.5, 0.5])
                 texScale = feature.get('TextureScaling', 1.0)
                 snode = GeomNode(featureName)
 
@@ -244,11 +244,11 @@ class App(ShowBase):
                     center = (feature['Bounds'][1] + feature['Bounds'][0])/2
                     x_offset = feature.get('XOffset', 0)
                     right = makePlane(self.wallDistance + x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="left", fixedColor=fixedColor,
+                                                    length, self.wallHeight, facing="left", color=color,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(right)
                     left = makePlane(-self.wallDistance - x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="right", fixedColor=fixedColor,
+                                                    length, self.wallHeight, facing="right", color=color,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
 
@@ -257,7 +257,7 @@ class App(ShowBase):
                     height = feature.get('Height')
                     plane = makePlane(feature.get('XPos', 0), feature.get('YPos', 0), feature.get('ZPos', 0), 
                                                     width, feature.get('Height'), facing=feature.get('Facing'),
-                                                    fixedColor=fixedColor,texHScaling=width/height*texScale, texVScaling=texScale)
+                                                    color=color,texHScaling=width/height*texScale, texVScaling=texScale)
                     snode.addGeom(plane)
 
                 elif feature.get('Type') == 'Cylinder':
@@ -265,13 +265,13 @@ class App(ShowBase):
                     r = feature.get('Radius',5)
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YLocation'), 
-                                                            self.trackVPos, r, h, texHScaling=texScale, 
+                                                            self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
                     
                     if feature.get('XLocation', 'Both') in ['Right', 'Both']:
                         cylinder = makeCylinder(self.wallDistance, feature.get('YLocation'), 
-                                                            self.trackVPos, r, h, texHScaling=texScale, 
+                                                            self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
 
@@ -296,11 +296,11 @@ class App(ShowBase):
             # Default walls - light gray. Height could be parametric. These will fill any unspecified gaps
             snode = GeomNode('default_walls')
             right = makePlane(self.wallDistance, self.trackLength/2, self.trackVPos + self.wallHeight/2, 
-                                            self.trackLength, self.wallHeight, facing="left", fixedColor=0.5,
+                                            self.trackLength, self.wallHeight, facing="left", color=[0.5, 0.5, 0.5],
                                             texHScaling=self.trackLength/self.wallHeight)
             snode.addGeom(right)
             left = makePlane(-self.wallDistance, self.trackLength/2, self.trackVPos + self.wallHeight/2, 
-                                            self.trackLength, self.wallHeight, facing="right", fixedColor=0.5,
+                                            self.trackLength, self.wallHeight, facing="right", color=[0.5, 0.5, 0.5],
                                             texHScaling=self.trackLength/self.wallHeight)
             snode.addGeom(left)
             walls = track_parent.attachNewNode(snode)
@@ -358,4 +358,5 @@ class App(ShowBase):
         self.posZ = z
 
 app = App(display_config=display_config, maze_config=maze_config)
+
 app.run()

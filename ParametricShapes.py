@@ -3,7 +3,7 @@ from panda3d.core import Geom, GeomVertexFormat, GeomVertexData, GeomVertexWrite
 import math
 
 # helper function to make a vertical cylinder given center, radius, and height
-def makePlane(cx, cy, cz, width, height, facing="left", fixedColor=0.25, 
+def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25], 
               texHScaling=1.0, texVScaling=1.0, fixedAlpha=1.0):
     format = GeomVertexFormat.getV3n3cpt2()
     vdata = GeomVertexData('plane', format, Geom.UHDynamic)
@@ -79,7 +79,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", fixedColor=0.25,
     
 
     for i in range(4):
-        vertexColors.addData4f(fixedColor, fixedColor, fixedColor, fixedAlpha)
+        vertexColors.addData4f(*color, fixedAlpha)
 
     vertexTexCoord.addData2f(0.0, 0.0)
     vertexTexCoord.addData2f(1.0 * texHScaling, 0.0)
@@ -99,7 +99,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", fixedColor=0.25,
 
 # helper function to make a vertical cylinder given center, radius, and height
 def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
-                 texHScaling=1.0, texVScaling=1.0, fixedColor=0.25):
+                 texHScaling=1.0, texVScaling=1.0, color=[0.25, 0.25, 0.25]):
     format = GeomVertexFormat.getV3n3cpt2()
     vdata = GeomVertexData('cylinder', format, Geom.UHDynamic)
 
@@ -127,8 +127,8 @@ def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
         vertexNormals.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), 0)
 
         # adding different colors to the vertex for visibility
-        vertexColors.addData4f(fixedColor, fixedColor, fixedColor, 1.0)
-        vertexColors.addData4f(fixedColor, fixedColor, fixedColor, 1.0)
+        vertexColors.addData4f(*color, 1.0)
+        vertexColors.addData4f(*color, 1.0)
 
         vertexTexCoord.addData2f(k/num_divisions * texHScaling, 1.0 * texVScaling)
         vertexTexCoord.addData2f(k/num_divisions * texHScaling, 0.0)
