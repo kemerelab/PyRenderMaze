@@ -83,7 +83,7 @@ class App(ShowBase):
         # gets its own window. X on the Pi defaults to having one big screen set across multiple monitors, and ironically
         # it proves difficult to configure it to instantiate multiple screens (back in the day it was hard to convice X to
         # span windows!). Thus only option (1) is currently supported. For hints towards implementing (2), look at commit
-        #   
+        # d2ee4957bf81f6d2a24169a823065599df1d5083 and earlier.
         self.n_views = display_config.get('NViews', 1) # default to one view
         self.camera_view_angles = display_config.get('ViewAngles', [0]) # default to straight ahead
         if len(self.camera_view_angles) != self.n_views:
