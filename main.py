@@ -318,7 +318,7 @@ class App(ShowBase):
     def update_data_server(self, IP):
         # Initialize (or Re-initialize) ZMQ connection to position data server
         if self.data_socket:
-            self.poller.unregister(self.data_socket, zmq.POLLIN)
+            self.poller.unregister(self.data_socket)
             self.data_socket.close()
 
         success = False
