@@ -345,7 +345,6 @@ class App(ShowBase):
                         except:
                             self.command_socket.send(b"NewModelFailure")
                             self.draw_model({})
-                            success = False
                         if success:
                             self.command_socket.send(b"NewModelSuccess")
                     elif msg['Command'] == 'Exit':
@@ -371,7 +370,7 @@ class App(ShowBase):
         self.posY = y
         self.posZ = z
 
-# app = App(display_config=display_config)
-app = App(display_config=display_config, maze_config=maze_config)
+app = App(display_config=display_config)
+# app = App(display_config=display_config, maze_config=maze_config)
 
 app.run()
