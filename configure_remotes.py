@@ -27,10 +27,11 @@ context = zmq.Context()
 msg = {'Command':'NewModel', 'MazeConfig':maze_config}
 
 client_IPs = ['10.129.151.177', '10.129.151.185', '10.129.151.166']
-client = context.socket(zmq.REQ)
+
 
 for ip in client_IPs:
     SERVER_ENDPOINT = "tcp://{}:8557".format(ip)
+    client = context.socket(zmq.REQ)
     client.connect(SERVER_ENDPOINT)
     print('Sending maze')
     client.send(pickle.dumps(msg))

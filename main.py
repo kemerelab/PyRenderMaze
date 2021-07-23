@@ -54,7 +54,7 @@ class App(ShowBase):
     roomSize = 750
 
     # Use cm as units
-    trackWidth = 15 # This is actually how wide our running wheel is
+    # trackWidth = 15 # This is actually how wide our running wheel is
 
     # The trackLength corresponds to a virtual thing. The height of the track
     #  should correspond to the physical height of the wheel because the running
@@ -222,17 +222,8 @@ class App(ShowBase):
         room_walls.setTexture(noise)
         # walls_node.setTwoSided(True)
 
-
         # trackLength, trackWidth, wallDistance all could be parametric, but I think most likely these wouldn't need to change often
         track_parent = maze_geometry_root.attachNewNode(GeomNode('MazeParent'))
-
-        # Floor - always the same. Really should make it slightly blue to match wheels
-        floor = makePlane(0, self.trackLength/2, self.trackVPos, self.trackWidth, self.trackLength, facing="up", 
-                                    color=[0.1, 0.1, 0.1], texHScaling=10, texVScaling=self.trackLength/self.trackWidth*10)
-        snode = GeomNode('floor')
-        snode.addGeom(floor)
-        floor_node = track_parent.attachNewNode(snode)
-        floor_node.setTexture(noise) # The fiberglass wheel has a noise-like texture. Its more like cross hatching, but that's ok for now
 
         # if self.printStatements:
         #     print("i: -1",  "startPoint: ",  points[0]-100, "endPoint: ", 250)
@@ -347,8 +338,16 @@ class App(ShowBase):
                     msg = pickle.loads(pickled_msg)
                     print("Message received: ", msg)
                     if msg['Command'] == 'NewModel':
-                        self.draw_model(msg.get("MazeConfig", None))
-                        self.command_socket.send(b"NewModelSuccess")
+                        success = False
+                        try:
+                            self.draw_model(msg.get("MazeConfig", {}))
+                            success = True
+                        except:
+                            self.command_socket.send(b"NewModelFailure")
+                            self.draw_model({})
+                            success = False
+                        if success:
+                            self.command_socket.send(b"NewModelSuccess")
                     elif msg['Command'] == 'Exit':
                         self.command_socket.send(b"Exiting")
                         self.exit_fun()
@@ -372,7 +371,7 @@ class App(ShowBase):
         self.posY = y
         self.posZ = z
 
-app = App(display_config=display_config)
-# app = App(display_config=display_config, maze_config=maze_config)
+# app = App(display_config=display_config)
+app = App(display_config=display_config, maze_config=maze_config)
 
 app.run()

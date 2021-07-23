@@ -1,9 +1,19 @@
 # Yaml descriptor of an example maze
 TrackLength: 240
 WallHeight: 20
-WallDistance: 15
+WallDistance: 12
 
 TrackFeatures:
+  Floor:
+    Type: 'Plane'
+    Width: 15
+    Height: 240
+    XPos: 0
+    YPos: 120
+    ZPos: 0
+    Facing: 'up'
+    Texture: 'textures/noise.png'
+    Color: [0, 0.75, 1]
   Segment0:
     Type: 'Wall'
     Bounds: [0,240]
