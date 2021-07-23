@@ -151,21 +151,10 @@ class App(ShowBase):
             lens.setFar(5000.0)
             current_cam_node.node().setLens(lens)
 
-
         self.maze_geometry_root = None
-
-
-        self.maze_geometry_root = self.init_track(maze_config)
+        self.init_track(maze_config)
 
         base.setBackgroundColor(0, 0, 0)  # set the background color to black
-
-        # ZMQ connection to position data server
-        data_socket_port = "8556"
-        # Socket to talk to server
-        context = zmq.Context()
-        self.data_socket = context.socket(zmq.SUB)
-        self.data_socket.connect ("tcp://localhost:%s" % data_socket_port)
-        self.data_socket.setsockopt(zmq.SUBSCRIBE, b"")
 
         # ZMQ server connection for commands. 
         # We use a DEALER/REP architecture for reliability.
@@ -176,7 +165,6 @@ class App(ShowBase):
         self.command_socket.bind("tcp://*:%s" % command_socket_port)
 
         self.poller = zmq.Poller()
-        self.poller.register(self.data_socket, zmq.POLLIN)
         self.poller.register(self.command_socket, zmq.POLLIN)
 
         self.last_timestamp = 0
@@ -197,7 +185,14 @@ class App(ShowBase):
     def draw_model(self, maze_config):
         if self.maze_geometry_root:
             self.remove_model()
-        self.maze_geometry_root = self.init_track(maze_config)
+        success = False
+        try:
+            self.init_track(maze_config)
+            success = True
+        except:
+            self.init_track({})
+
+        return success
 
     def init_track(self, trackConfig):
         trackFeatures = trackConfig.get('TrackFeatures', None)
@@ -211,19 +206,19 @@ class App(ShowBase):
         noise = loader.loadTexture("textures/whitenoise.png")
 
         maze_root_node = GeomNode("maze_root_node")
-        maze_geometry_root = self.render.attachNewNode(maze_root_node)
+        self.maze_geometry_root = self.render.attachNewNode(maze_root_node)
 
         room_wall_cylinder = makeCylinder(0, self.trackLength/2, -5*self.roomSize/2, self.roomSize, 10*self.roomSize, 
                                           facing="inward", texHScaling=12, texVScaling=12, color=[1.0, 1.0, 1.0])
 
         snode = GeomNode('room_walls')
         snode.addGeom(room_wall_cylinder)
-        room_walls = maze_geometry_root.attachNewNode(snode)
+        room_walls = self.maze_geometry_root.attachNewNode(snode)
         room_walls.setTexture(noise)
         # walls_node.setTwoSided(True)
 
         # trackLength, trackWidth, wallDistance all could be parametric, but I think most likely these wouldn't need to change often
-        track_parent = maze_geometry_root.attachNewNode(GeomNode('MazeParent'))
+        track_parent = self.maze_geometry_root.attachNewNode(GeomNode('MazeParent'))
 
         # if self.printStatements:
         #     print("i: -1",  "startPoint: ",  points[0]-100, "endPoint: ", 250)
@@ -273,7 +268,7 @@ class App(ShowBase):
                 if feature.get('DuplicateForward', True):
                     node = track_parent.attachNewNode(snode)
                 else:
-                    node = maze_geometry_root.attachNewNode(snode)
+                    node = self.maze_geometry_root.attachNewNode(snode)
 
                 if 'Texture' in feature:
                     tex = loader.loadTexture(feature['Texture'])
@@ -311,11 +306,34 @@ class App(ShowBase):
 
         # Make a copy of the walls and floor at the end of the maze. This makes it look like it goes on further
         node = GeomNode('track_copy')
-        maze_geometry_copy_parent = maze_geometry_root.attachNewNode(node)
+        maze_geometry_copy_parent = self.maze_geometry_root.attachNewNode(node)
         second_maze = track_parent.copyTo(maze_geometry_copy_parent)
         maze_geometry_copy_parent.setPos(0, self.trackLength, 0)
 
-        return maze_geometry_root
+        return self.maze_geometry_root
+
+
+    def update_data_server(self, IP):
+        # Initialize (or Re-initialize) ZMQ connection to position data server
+        if self.data_socket:
+            self.poller.unregister(self.data_socket, zmq.POLLIN)
+            self.data_socket.close()
+
+        success = False
+        if IP:
+            context = zmq.Context()
+            self.data_socket = context.socket(zmq.SUB)
+            try:
+                self.data_socket.connect(IP)
+                success = True
+                self.data_socket.setsockopt(zmq.SUBSCRIBE, b"")
+                self.poller.register(self.data_socket, zmq.POLLIN)
+            except:
+                print('Failed to connect to IP {}'.format(IP))
+        
+        #     data_socket_port = "8556"
+        #     self.data_socket.connect ("tcp://localhost:%s" % data_socket_port)
+        return success
 
     def exit_fun(self):
         print('Exit called')
@@ -337,16 +355,19 @@ class App(ShowBase):
                     pickled_msg = self.command_socket.recv() # Command Socket Messages are pickled dictionaries
                     msg = pickle.loads(pickled_msg)
                     print("Message received: ", msg)
-                    if msg['Command'] == 'NewModel':
-                        success = False
-                        try:
-                            self.draw_model(msg.get("MazeConfig", {}))
-                            success = True
-                        except:
-                            self.command_socket.send(b"NewModelFailure")
-                            self.draw_model({})
+                    if msg['Command'] == 'LoadModel':
+                        success = self.draw_model(msg.get("MazeConfig", {}))
                         if success:
-                            self.command_socket.send(b"NewModelSuccess")
+                            self.command_socket.send(b"ModelLoaded")
+                        else:
+                            self.command_socket.send(b"ModelFailure")
+                    elif msg['Command'] == 'UpdateDataServer':
+                        success = self.update_data_server(msg.get("DataServerAddress", None))
+                        if success:
+                            self.command_socket.send(b"DataServerUpdated")
+                        else:
+                            self.command_socket.send(b"DataServerFailure")
+
                     elif msg['Command'] == 'Exit':
                         self.command_socket.send(b"Exiting")
                         self.exit_fun()
