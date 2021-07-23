@@ -173,7 +173,7 @@ class App(ShowBase):
         # Socket to talk to server
         context = zmq.Context()
         self.command_socket = context.socket(zmq.REP)
-        self.command_socket.bind("tcp://127.0.0.1:%s" % command_socket_port)
+        self.command_socket.bind("tcp://*:%s" % command_socket_port)
 
         self.poller = zmq.Poller()
         self.poller.register(self.data_socket, zmq.POLLIN)
@@ -181,7 +181,6 @@ class App(ShowBase):
 
         self.last_timestamp = 0
         self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
-
 
         self.accept('escape', self.exit_fun)
 
