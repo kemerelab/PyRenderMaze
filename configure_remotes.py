@@ -20,7 +20,6 @@ import sys
 
 REQUEST_TIMEOUT = 2500
 REQUEST_RETRIES = 3
-SERVER_ENDPOINT = "tcp://localhost:8557"
 
 context = zmq.Context()
 
@@ -34,7 +33,7 @@ for ip in client_IPs:
     SERVER_ENDPOINT = "tcp://{}:8557".format(ip)
     client.connect(SERVER_ENDPOINT)
     print('Sending maze')
-    client.send(msg)  # actual message
+    client.send(pickle.dumps(msg))
 
     retries_left = REQUEST_RETRIES
     while True:

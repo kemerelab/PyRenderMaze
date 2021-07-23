@@ -175,10 +175,6 @@ class App(ShowBase):
         self.command_socket = context.socket(zmq.REP)
         self.command_socket.bind("tcp://127.0.0.1:%s" % command_socket_port)
 
-        context = zmq.Context()
-        server = context.socket(zmq.REP)
-        server.bind("tcp://*:5555")
-
         self.poller = zmq.Poller()
         self.poller.register(self.data_socket, zmq.POLLIN)
         self.poller.register(self.command_socket, zmq.POLLIN)
