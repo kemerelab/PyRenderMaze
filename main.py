@@ -167,6 +167,8 @@ class App(ShowBase):
         self.poller = zmq.Poller()
         self.poller.register(self.command_socket, zmq.POLLIN)
 
+        self.data_socket = None # This will be configured by remote control
+
         self.last_timestamp = 0
         self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
 
