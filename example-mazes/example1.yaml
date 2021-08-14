@@ -1,6 +1,7 @@
 # Yaml descriptor of an example maze
 TrackLength: 240
 WallHeight: 20
+WallDistance: 12
 
 TrackFeatures:
   Segment1:

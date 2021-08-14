@@ -12,8 +12,9 @@ TrackFeatures:
     YPos: 120
     ZPos: 0
     Facing: 'up'
-    Texture: 'textures/noise.png'
-    Color: [0, 0.75, 1]
+    Texture: 'textures/whitenoise.png'
+    TextureScaling: 20
+    Color: [0.5, 0.95, 1]
   Segment0:
     Type: 'Wall'
     Bounds: [0,240]
