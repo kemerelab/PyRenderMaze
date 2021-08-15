@@ -16,9 +16,9 @@ stimuli. However, as PyRenderMaze runs as a separate process, or indeed, even on
 ## Quick start
 To test, begin by cloning the repository, and ensuring that you have all needed packages (i.e., `pandas3d pyzmq pyyaml`) installed. 
 + Run `git clone https://github.com/kemerelab/PyRenderMaze`
-+ Install Panda3D [Windpws](https://docs.panda3d.org/1.10/python/introduction/installation-windows) or 
++ Install Panda3D [Windows](https://docs.panda3d.org/1.10/python/introduction/installation-windows) or 
    [Linux](https://docs.panda3d.org/1.10/python/introduction/installation-linux). See notes below for gists describing the installation process for Raspberry Pi. 
-+ Install other dependencies `/usr/bin/pip3 install pyzmq pyyaml` (note that if you are an Anaconda user, the packaged Panad3D may not be installed in your default conda environment! Using the system python3 and pip3 makes this not a concern.)
++ Install other dependencies `/usr/bin/pip3 install pyzmq pyyaml` (note that if you are an Anaconda user, the packaged Panad3D may not be installed in your default conda environment! Using the system python3 and pip3 alleviates this concern.)
 + You should then be able to run the program with `/usr/bin/python3 main.py`. Note that the file `display_config.yaml` contains
   the size of the display and the relative geometry of the eye position. You should edit this file in each PyRenderMaze client
   such that each display renders properly.
