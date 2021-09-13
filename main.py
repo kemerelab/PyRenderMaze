@@ -13,6 +13,8 @@ import numpy as np
 import math
 import yaml
 import pickle
+import datetime
+import csv
 
 import sys
 from subprocess import check_output
@@ -97,12 +99,14 @@ class App(ShowBase):
             raise(ValueError('Must specify distance from eye to each display.'))
         self.screen_h_v_offsets = display_config.get('MonitorOffsets', [[0,0]]*self.n_views) # default to no display center offset
 
+        # Initialize dimensions corresponding to each view
         self.screen_width = []
         self.fov_h_v = []
         for n in range(self.n_views):
             width, height = widths_and_heights[n]
             self.screen_width.append(width)
-            # Let's describe the shape of the screen in terms of the field of view
+            # Let's describe the shape of the screen in terms of the field of view angles.
+            #   (This requires a bit of geometry!)
             fov_h = math.atan2(width/2, distances[n])*2 / math.pi * 180
             fov_v = math.atan2(height/2, distances[n])*2 / math.pi * 180
             self.fov_h_v.append([fov_h, fov_v])
@@ -111,12 +115,15 @@ class App(ShowBase):
         # Set up view(s)
         for n in range(self.n_views):
             if (n > 0):
+                # The display region is the bread and butter of the view.
                 new_dr = base.win.makeDisplayRegion(*self.display_regions[n])
                 print(self.display_regions[n])
-                new_dr.setClearColor(VBase4(0, 0, 0, 1))
-                new_dr.setClearColorActive(True)
-                new_dr.setClearDepthActive(True)
+                new_dr.setClearColor(VBase4(0, 0, 0, 1)) # clear to black
+                new_dr.setClearColorActive(True) # clear every frame
+                new_dr.setClearDepthActive(True) # clear the z-buffer as wll
 
+                # The camera the thing that looks at our model and sends data to the display region.
+                #   For each view (monitor), we can have a different camera looking from a different angle/etc.
                 new_cam = Camera('cam{}'.format(n))
                 current_cam_node = self.render.attachNewNode(new_cam)
                 new_dr.setCamera(current_cam_node)
@@ -170,11 +177,41 @@ class App(ShowBase):
         self.data_socket = None # This will be configured by remote control
 
         self.last_timestamp = 0
-        self.taskMgr.add(self.readMsgs, "ReadZMQMessages", priority=1)
+        self.taskMgr.add(self.readMsgs, "ReadZMQMessages", sort=1)
 
         self.accept('escape', self.exit_fun)
 
+        # -----------------------------------------
+        # Instrumentation code
+        do_frame_synchronization = True
+        if do_frame_synchronization:
+            # Frame synchronization (if desired) is done with two squares in the bottom corners.
+            # One will flash per frame, and the other in a less periodic pattern. We write the most
+            #   recent position data and the square states to disk for post-hoc comparison with the
+            #   recorded data.
+            sync_square_width = 0.05
+            left_square = makePlane(-1 + sync_square_width/2, 0, -1 + sync_square_width/2, 
+                sync_square_width, sync_square_width, facing='front',color=[0, 0, 0])
+            right_square = makePlane(1 - sync_square_width/2, 0, -1 + sync_square_width/2, 
+                sync_square_width, sync_square_width, facing='front',color=[0, 0, 0])
+            left_square_node = GeomNode("LeftSyncSquare")
+            left_square_node.addGeom(left_square)
+            right_square_node = GeomNode("RighteSyncSquare")
+            right_square_node.addGeom(right_square)
+            self.left_sync_square = render2d.attachNewNode(left_square_node)
+            self.right_sync_square = render2d.attachNewNode(right_square_node)
+
+            self.sync_state = 0
+            self.taskMgr.add(self.syncSquares, "FlashSyncSquares", sort=2) # execute after the readMsgs function
+            now = datetime.datetime.now()
+            filename = '{}{}.csv'.format('ExperimentLog', now.strftime("%Y-%m-%d_%H%M"))
+            self.sync_log_file = open(filename, 'w', newline='')
+            self.sync_log_writer = csv.writer(self.sync_log_file)
+
+
+        # Display frame rate
         base.setFrameRateMeter(True)
+
 
     def remove_model(self):
         if self.maze_geometry_root:
@@ -339,6 +376,7 @@ class App(ShowBase):
 
     def exit_fun(self):
         print('Exit called')
+        self.sync_log_file.close()
         sys.exit()
 
     def readMsgs(self, task):
@@ -392,6 +430,22 @@ class App(ShowBase):
         self.posX = x
         self.posY = y
         self.posZ = z
+
+    def syncSquares(self, task):
+        self.sync_state += 1
+        if (self.sync_state % 2) == 1:
+            self.left_sync_square.setColor(1, 1, 1, 1) # white on odd
+        else:
+            self.left_sync_square.setColor(0, 0, 0, 1) # black on even
+
+        if (self.sync_state % 8) < 4:
+            self.right_sync_square.setColor(1, 1, 1, 1) # white on first 4
+        else:
+            self.right_sync_square.setColor(0, 0, 0, 1) # black on rest
+
+        self.sync_log_writer.writerow([self.last_timestamp, self.posY, self.sync_state])
+
+        return Task.cont
 
 app = App(display_config=display_config)
 # app = App(display_config=display_config, maze_config=maze_config)
