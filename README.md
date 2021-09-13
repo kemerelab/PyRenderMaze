@@ -13,6 +13,8 @@ This program is designed to run in concert with the [https://github.com/kemerela
 a hardware interface to a cylindrical treadmill as well as real-time virtual-position-based control of dynamic auditory
 stimuli. However, as PyRenderMaze runs as a separate process, or indeed, even on separate computers, it can be used independetly. 
 
+![](PyRenderMazeExample.gif)
+
 ## Quick start
 To test, begin by cloning the repository, and ensuring that you have all needed packages (i.e., `pandas3d pyzmq pyyaml`) installed. 
 + Run `git clone https://github.com/kemerelab/PyRenderMaze`
