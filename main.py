@@ -302,7 +302,7 @@ class App(ShowBase):
                         snode.addGeom(cylinder)
                     
                     if feature.get('XLocation', 'Both') in ['Right', 'Both']:
-                        cylinder = makeCylinder(self.wallDistance, feature.get('YLocation'), 
+                        cylinder = makeCylinder(self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
@@ -310,7 +310,7 @@ class App(ShowBase):
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
-                    cylinder = makeCylinder(feature.get('XLocation'), feature.get('YLocation'), 
+                    cylinder = makeCylinder(feature.get('XPos'), feature.get('YPos'), 
                                                         self.trackVPos, r, h, facing=feature.get('Facing','outward'),
                                                         color=color, texHScaling=texScale, 
                                                         texVScaling=texScale * (math.pi * 2 * r) / h)
