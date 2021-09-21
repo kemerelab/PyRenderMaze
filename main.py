@@ -292,7 +292,7 @@ class App(ShowBase):
                                                     color=color,texHScaling=width/height*texScale, texVScaling=texScale)
                     snode.addGeom(plane)
 
-                elif feature.get('Type') == 'Cylinder':
+                elif feature.get('Type') == 'WallCylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
@@ -306,6 +306,15 @@ class App(ShowBase):
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
+
+                elif feature.get('Type') == 'Cylinder':
+                    h = feature.get('Height',self.wallHeight*3)
+                    r = feature.get('Radius',5)
+                    cylinder = makeCylinder(feature.get('XLocation'), feature.get('YLocation'), 
+                                                        self.trackVPos, r, h, facing=feature.get('Facing','outward'),
+                                                        color=color, texHScaling=texScale, 
+                                                        texVScaling=texScale * (math.pi * 2 * r) / h)
+                    snode.addGeom(cylinder)
 
                 if feature.get('DuplicateForward', True):
                     node = track_parent.attachNewNode(snode)

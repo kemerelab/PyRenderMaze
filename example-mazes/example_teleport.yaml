@@ -44,7 +44,7 @@ TrackFeatures:
     TextureScaling: 5
     Color: [1, 1, 1]
   Cylinder1:
-    Type: "Cylinder"
+    Type: "WallCylinder"
     XLocation: "Both"
     YLocation: 135
     Texture: 'textures/checkerboard.png'
@@ -52,10 +52,19 @@ TrackFeatures:
     Height: 50
     Color: [0, 0.5, 0.25]
   RewardScreen:
-    Type: 'Plane'
-    Facing: 'front'
+    Type: 'Cylinder'
+    Facing: 'inward'
+    XPos: 0
     YPos: -5
-    Width: 100
+    Radius: 2.4
     Height: 100
+    Color: [0.25, 0.25, 0.25]
     DuplicateForward: False
+  # RewardScreen:
+  #   Type: 'Plane'
+  #   Facing: 'front'
+  #   YPos: -5
+  #   Width: 100
+  #   Height: 100
+  #   DuplicateForward: False
 

@@ -24,7 +24,7 @@ TrackFeatures:
     RotateTexture: 45 # degrees
     TextureScaling: 5
   Cylinder1:
-    Type: "Cylinder"
+    Type: "WallCylinder"
     XLocation: "Both"
     YLocation: 135
     Texture: 'textures/checkerboard.png'
