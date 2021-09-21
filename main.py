@@ -34,9 +34,13 @@ with open("display_config.yaml", 'r') as stream:
 windowTitle = "PyRenderMaze"
 loadPrcFileData("", f"window-title {windowTitle}")
 
-w, h = display_config.get("WindowSize", (800, 600))
+w, h = display_config.get("WindowSize", (640, 480))
 loadPrcFileData("", "win-size {} {}".format(w, h))
-loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start
+loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start in Ubuntu
+# loadPrcFileData("", "auto-flip 1") # try speed up
+# loadPrcFileData("", "sync-video 0") # try speed up
+# loadPrcFileData("", "back-buffers 0") # try speed up - this causes run loop not to start?
+
 
 maze_config_filename = "example-mazes/example_teleport.yaml"
 with open(maze_config_filename, "r") as stream:
@@ -48,6 +52,8 @@ class App(ShowBase):
     posX = 0.0
     posY = 0.0
     posZ = 0.0
+
+    do_frame_synchronization = False # Make this true to enable a task which flashes squares per frame
 
     # In order to provide motion cues, we define a large cylinder to hold a background
     # texture. The goal is that the wall of this cylinder is far enough from the mouse,
@@ -63,7 +69,6 @@ class App(ShowBase):
     #  behavior is supposed to correspond with running on the virtual track.
     trackVPos = 0 # 0 means the track is centered on the "virtual center" of 
                     # the screen. We'll adjust to offset the monitor later.
-
 
     def __init__(self, display_config={}, maze_config={}):
         ShowBase.__init__(self)
@@ -183,7 +188,6 @@ class App(ShowBase):
 
         # -----------------------------------------
         # Instrumentation code
-        do_frame_synchronization = True
         if do_frame_synchronization:
             # Frame synchronization (if desired) is done with two squares in the bottom corners.
             # One will flash per frame, and the other in a less periodic pattern. We write the most
@@ -209,8 +213,7 @@ class App(ShowBase):
             self.sync_log_writer = csv.writer(self.sync_log_file)
 
 
-        # Display frame rate
-        base.setFrameRateMeter(True)
+        base.setFrameRateMeter(True) # Display frame rate
 
 
     def remove_model(self):
@@ -432,6 +435,7 @@ class App(ShowBase):
         self.posZ = z
 
     def syncSquares(self, task):
+        # TODO: update right square pattern with gold code: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.max_len_seq.html
         self.sync_state += 1
         if (self.sync_state % 2) == 1:
             self.left_sync_square.setColor(1, 1, 1, 1) # white on odd
