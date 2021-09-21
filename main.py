@@ -188,7 +188,7 @@ class App(ShowBase):
 
         # -----------------------------------------
         # Instrumentation code
-        if do_frame_synchronization:
+        if self.do_frame_synchronization:
             # Frame synchronization (if desired) is done with two squares in the bottom corners.
             # One will flash per frame, and the other in a less periodic pattern. We write the most
             #   recent position data and the square states to disk for post-hoc comparison with the
