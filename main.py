@@ -388,7 +388,8 @@ class App(ShowBase):
 
     def exit_fun(self):
         print('Exit called')
-        self.sync_log_file.close()
+        if self.do_frame_synchronization:
+            self.sync_log_file.close()
         sys.exit()
 
     def readMsgs(self, task):
