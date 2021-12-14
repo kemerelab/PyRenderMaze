@@ -297,7 +297,7 @@ class App(ShowBase):
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
-                        cylinder = makeCylinder(-self.wallDistance, feature.get('YLocation'), 
+                        cylinder = makeCylinder(-self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h)
                         snode.addGeom(cylinder)
@@ -389,7 +389,8 @@ class App(ShowBase):
 
     def exit_fun(self):
         print('Exit called')
-        self.sync_log_file.close()
+        if self.do_frame_synchronization:
+            self.sync_log_file.close()
         sys.exit()
 
     def readMsgs(self, task):
