@@ -253,11 +253,12 @@ class App(ShowBase):
         room_wall_cylinder = makeCylinder(0, self.trackLength/2, -5*self.roomSize/2, self.roomSize, 10*self.roomSize, 
                                           facing="inward", texHScaling=12, texVScaling=12, color=[1.0, 1.0, 1.0])
 
-        snode = GeomNode('room_walls')
-        snode.addGeom(room_wall_cylinder)
-        room_walls = self.maze_geometry_root.attachNewNode(snode)
-        room_walls.setTexture(noise)
-        # walls_node.setTwoSided(True)
+        if trackConfig.get('EnableBackgroundTexture', True):
+            snode = GeomNode('room_walls')
+            snode.addGeom(room_wall_cylinder)
+            room_walls = self.maze_geometry_root.attachNewNode(snode)
+            room_walls.setTexture(noise)
+            # walls_node.setTwoSided(True)
 
         # trackLength, trackWidth, wallDistance all could be parametric, but I think most likely these wouldn't need to change often
         track_parent = self.maze_geometry_root.attachNewNode(GeomNode('MazeParent'))
