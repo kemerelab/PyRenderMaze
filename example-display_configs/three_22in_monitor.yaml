@@ -1,0 +1,29 @@
+# Yaml descriptor of display setup
+# This file has the configuration for the 3 21.5" monitors in our setup
+
+# Common configuration
+WindowSize: [720, 480] # This will be the size of the full screen window
+NViews: 1 # The number of maze views for this node
+MonitorOffsets: [ [0, 4] ] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
+
+# Uncomment one of the following 3 selections!
+
+# # Configuration for left monitor
+# ViewAngles: [90] # List of view angles for each view
+# DisplayRegions: [  [0, 1, 0, 1] ] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
+# MonitorSizes: [ [43, 24]] # Size in cm of each display/view
+# MonitorDistances: [12] # Distance from mouse's eye to each display
+
+
+# # Configuration for center monitor
+# ViewAngles: [0] # List of view angles for each view
+# DisplayRegions: [  [0.22, 0.78, 0, 1] ] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
+# MonitorSizes: [ [24, 24]] # Size in cm of each display/view
+# MonitorDistances: [17.5] # Distance from mouse's eye to each display
+
+
+# # Configuration for right monitor
+# ViewAngles: [-90] # List of view angles for each view
+# DisplayRegions: [  [0, 1, 0, 1] ] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
+# MonitorSizes: [ [43, 24]] # Size in cm of each display/view
+# MonitorDistances: [12] # Distance from mouse's eye to each display
