@@ -25,6 +25,59 @@ import struct
 # Local code
 from ParametricShapes import makeCylinder, makePlane
 
+import serial
+
+def configure_pin(pin, direction, pinType='DIO'):
+    PinModes = {'INPUT': 0, 
+            'OUTPUT': 1,
+            'INPUT_PULLUP': 2,
+            'INPUT_PULLDOWN': 3,
+            'OUTPUT_OPENDRAIN': 4,
+            'INPUT_DISABLE': 5}
+
+    global serialport
+    configureString = b'\xA9' # Magic character which indicates start of command
+    if pinType == 'DIO':
+        configureString += b'C'
+    elif pinType == 'AUX':
+        configureString += b'X'
+
+    configureString += pin.to_bytes(1, byteorder='big',signed=True)
+    assert(direction.upper() in PinModes)
+    configureString += PinModes[direction.upper()].to_bytes(1, byteorder='big',signed=True)
+    serialport.write(configureString)
+
+def write_pin(pin, value, pinType='DIO', mirror=True):
+    global serialport
+
+    writeString = b'\xA9' # Magic character which indicates start of command
+    if not mirror:
+        if pinType == 'DIO':
+            writeString += b'D'
+        elif pinType == 'AUX':
+            writeString += b'A'
+    else:
+        writeString += b'M'
+
+    writeString += pin.to_bytes(1, byteorder='big',signed=True)
+    writeString += value.to_bytes(1, byteorder='big',signed=True)
+    # print(value, writeString) # debuggging
+    serialport.write(writeString)
+
+
+serialport = serial.Serial(port='/dev/ttyACM0',
+    baudrate = 256000,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=0.1,
+    write_timeout=0
+)
+
+configure_pin(1, direction='OUTPUT')
+configure_pin(1, direction='OUTPUT', pinType='AUX')
+
+
 
 # Read YAML file
 with open("display_config.yaml", 'r') as stream:
@@ -36,10 +89,10 @@ loadPrcFileData("", f"window-title {windowTitle}")
 
 w, h = display_config.get("WindowSize", (640, 480))
 loadPrcFileData("", "win-size {} {}".format(w, h))
-loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start in Ubuntu
+# loadPrcFileData("", "fullscreen true") # causes some sort of bug where run loop doesn't start in Ubuntu
 # loadPrcFileData("", "auto-flip 1") # try speed up
-# loadPrcFileData("", "sync-video 0") # try speed up
-# loadPrcFileData("", "back-buffers 0") # try speed up - this causes run loop not to start?
+loadPrcFileData("", "sync-video 0") # try speed up
+# loadPrcFileData("", "back-buffers 1") # try speed up - this causes run loop not to start?
 
 
 maze_config_filename = "example-mazes/example_teleport.yaml"
@@ -233,6 +286,7 @@ class App(ShowBase):
             success = True
         except:
             self.init_track({})
+        self.init_track(maze_config)
 
         return success
 
@@ -395,7 +449,8 @@ class App(ShowBase):
 
     def readMsgs(self, task):
         posY = self.posY
-        msg_list = self.poller.poll(timeout=0.01)
+        update = False
+        msg_list = self.poller.poll(timeout=0) # was 0.01
         while msg_list:
             for sock, event in msg_list:
                 if sock == self.data_socket:
@@ -403,6 +458,7 @@ class App(ShowBase):
                     self.last_timestamp, posY = struct.unpack('<Ld',msg)
                     if posY != self.posY:
                         self.posY = posY
+                        update = True
                         # print(self.posY)
                 elif sock==self.command_socket:
                     print('Got a command message')
@@ -432,8 +488,14 @@ class App(ShowBase):
                                                    # should be to catch all of these, but...
 
 
-        for c in self.cameras:
-            c.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
+        if update:
+          for c in self.cameras:
+              c.setPos(self.posX, self.posY, self.posZ + self.cameraHeight)
+              if self.posY == 0:
+                  write_pin(1, 1)
+              else:
+                  write_pin(1, 0)
+
 
         return Task.cont
 
