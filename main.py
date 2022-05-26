@@ -296,31 +296,38 @@ class App(ShowBase):
                 elif feature.get('Type') == 'WallCylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
+                    alpha = feature.get('Alpha', 1.0)
+
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
-                                                            texVScaling=texScale * (math.pi * 2 * r) / h)
+                                                            texVScaling=texScale * (math.pi * 2 * r) / h, alpha=alpha)
                         snode.addGeom(cylinder)
                     
                     if feature.get('XLocation', 'Both') in ['Right', 'Both']:
                         cylinder = makeCylinder(self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
-                                                            texVScaling=texScale * (math.pi * 2 * r) / h)
+                                                            texVScaling=texScale * (math.pi * 2 * r) / h, alpha=alpha)
                         snode.addGeom(cylinder)
 
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
+                    alpha = feature.get('Alpha', 1.0)
                     cylinder = makeCylinder(feature.get('XPos'), feature.get('YPos'), 
                                                         self.trackVPos, r, h, facing=feature.get('Facing','outward'),
                                                         color=color, texHScaling=texScale, 
-                                                        texVScaling=texScale * (math.pi * 2 * r) / h)
+                                                        texVScaling=texScale * (math.pi * 2 * r) / h,
+                                                        alpha=alpha)
                     snode.addGeom(cylinder)
 
                 if feature.get('DuplicateForward', True):
                     node = track_parent.attachNewNode(snode)
                 else:
                     node = self.maze_geometry_root.attachNewNode(snode)
+
+                if feature.get('Alpha',1.0) < 1.0:
+                    node.setTransparency(TransparencyAttrib.MAlpha)
 
                 if 'Texture' in feature:
                     tex = loader.loadTexture(feature['Texture'])
