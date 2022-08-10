@@ -4,7 +4,7 @@ import math
 
 # helper function to make a vertical cylinder given center, radius, and height
 def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25], 
-              texHScaling=1.0, texVScaling=1.0, fixedAlpha=0.1):
+              texHScaling=1.0, texVScaling=1.0, alpha=1.0):
     format = GeomVertexFormat.getV3n3cpt2()
     vdata = GeomVertexData('plane', format, Geom.UHDynamic)
 
@@ -79,7 +79,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
     
 
     for i in range(4):
-        vertexColors.addData4f(*color, fixedAlpha)
+        vertexColors.addData4f(*color, alpha)
 
     vertexTexCoord.addData2f(0.0, 0.0)
     vertexTexCoord.addData2f(1.0 * texHScaling, 0.0)

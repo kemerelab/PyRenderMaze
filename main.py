@@ -19,8 +19,10 @@ import csv
 import sys
 from subprocess import check_output
 
-
 import struct
+
+import platform
+import socket
 
 # Local code
 from ParametricShapes import makeCylinder, makePlane
@@ -231,7 +233,8 @@ class App(ShowBase):
         try:
             self.init_track(maze_config)
             success = True
-        except:
+        except Exception as e:
+            print(e)
             self.init_track({})
 
         return success
@@ -271,17 +274,18 @@ class App(ShowBase):
                 color = feature.get('Color', [0.5, 0.5, 0.5])
                 texScale = feature.get('TextureScaling', 1.0)
                 snode = GeomNode(featureName)
+                alpha = feature.get('Alpha', 1.0)
 
                 if feature.get('Type') == 'Wall':
                     length = feature['Bounds'][1] - feature['Bounds'][0]
                     center = (feature['Bounds'][1] + feature['Bounds'][0])/2
                     x_offset = feature.get('XOffset', 0)
                     right = makePlane(self.wallDistance + x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="left", color=color,
+                                                    length, self.wallHeight, facing="left", color=color, alpha=alpha,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(right)
                     left = makePlane(-self.wallDistance - x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="right", color=color,
+                                                    length, self.wallHeight, facing="right", color=color, alpha=alpha,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
 
@@ -290,13 +294,13 @@ class App(ShowBase):
                     height = feature.get('Height')
                     plane = makePlane(feature.get('XPos', 0), feature.get('YPos', 0), feature.get('ZPos', 0), 
                                                     width, feature.get('Height'), facing=feature.get('Facing'),
-                                                    color=color,texHScaling=width/height*texScale, texVScaling=texScale)
+                                                    color=color, alpha=alpha,
+                                                    texHScaling=width/height*texScale, texVScaling=texScale)
                     snode.addGeom(plane)
 
                 elif feature.get('Type') == 'WallCylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
-                    alpha = feature.get('Alpha', 1.0)
 
                     if feature.get('XLocation', 'Both') in ['Left', 'Both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YPos'), 
@@ -313,7 +317,6 @@ class App(ShowBase):
                 elif feature.get('Type') == 'Cylinder':
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
-                    alpha = feature.get('Alpha', 1.0)
                     cylinder = makeCylinder(feature.get('XPos'), feature.get('YPos'), 
                                                         self.trackVPos, r, h, facing=feature.get('Facing','outward'),
                                                         color=color, texHScaling=texScale, 
@@ -326,7 +329,7 @@ class App(ShowBase):
                 else:
                     node = self.maze_geometry_root.attachNewNode(snode)
 
-                if feature.get('Alpha',1.0) < 1.0:
+                if alpha < 1.0:
                     node.setTransparency(TransparencyAttrib.MAlpha)
 
                 if 'Texture' in feature:
@@ -354,12 +357,17 @@ class App(ShowBase):
             snode.addGeom(left)
             walls = track_parent.attachNewNode(snode)
 
-
             if not self.IP_address_text:
-                # Render IP address by default
-                IP = check_output(['hostname', '-I']).decode("utf-8","ignore")
-                while len(IP) < 7:
+                IP = None
+                if platform.system() == 'Linux':
+                    # Render IP address by default
                     IP = check_output(['hostname', '-I']).decode("utf-8","ignore")
+                    while len(IP) < 7:
+                        IP = check_output(['hostname', '-I']).decode("utf-8","ignore")
+                elif platform.system() == 'Darwin':
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s: 
+                        s.connect(('8.8.8.8', 80)) 
+                        IP = s.getsockname()[0]
                 self.IP_address_text = OnscreenText(text=IP, pos=(0, 0.75), scale=0.1, align=TextNode.ACenter, fg=[1, 0, 0, 1])
 
 
