@@ -280,12 +280,15 @@ class App(ShowBase):
                     length = feature['Bounds'][1] - feature['Bounds'][0]
                     center = (feature['Bounds'][1] + feature['Bounds'][0])/2
                     x_offset = feature.get('XOffset', 0)
-                    right = makePlane(self.wallDistance + x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="left", color=color, alpha=alpha,
+
+                    if feature.get('XLocation', 'Both').lower() in ['right', 'both']:
+                        right = makePlane(self.wallDistance + x_offset, center, self.trackVPos + self.wallHeight/2, 
+                                                    length, self.wallHeight, facing="Left", color=color, alpha=alpha,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
-                    snode.addGeom(right)
-                    left = makePlane(-self.wallDistance - x_offset, center, self.trackVPos + self.wallHeight/2, 
-                                                    length, self.wallHeight, facing="right", color=color, alpha=alpha,
+                        snode.addGeom(right)
+                    if feature.get('XLocation', 'Both').lower() in ['left', 'both']:
+                        left = makePlane(-self.wallDistance - x_offset, center, self.trackVPos + self.wallHeight/2, 
+                                                    length, self.wallHeight, facing="Right", color=color, alpha=alpha,
                                                     texHScaling=length/self.wallHeight*texScale, texVScaling=texScale)
                     snode.addGeom(left)
 
@@ -302,13 +305,13 @@ class App(ShowBase):
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
 
-                    if feature.get('XLocation', 'Both') in ['Left', 'Both']:
+                    if feature.get('XLocation', 'Both').lower() in ['left', 'both']:
                         cylinder = makeCylinder(-self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h, alpha=alpha)
                         snode.addGeom(cylinder)
                     
-                    if feature.get('XLocation', 'Both') in ['Right', 'Both']:
+                    if feature.get('XLocation', 'Both').lower() in ['right', 'both']:
                         cylinder = makeCylinder(self.wallDistance, feature.get('YPos'), 
                                                             self.trackVPos, r, h, color=color, texHScaling=texScale, 
                                                             texVScaling=texScale * (math.pi * 2 * r) / h, alpha=alpha)
@@ -318,7 +321,7 @@ class App(ShowBase):
                     h = feature.get('Height',self.wallHeight*3)
                     r = feature.get('Radius',5)
                     cylinder = makeCylinder(feature.get('XPos'), feature.get('YPos'), 
-                                                        self.trackVPos, r, h, facing=feature.get('Facing','outward'),
+                                                        feature.get('ZPos', self.trackVPos), r, h, facing=feature.get('Facing','outward'),
                                                         color=color, texHScaling=texScale, 
                                                         texVScaling=texScale * (math.pi * 2 * r) / h,
                                                         alpha=alpha)
