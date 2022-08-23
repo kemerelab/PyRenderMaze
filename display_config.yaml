@@ -1,8 +1,7 @@
 # Yaml descriptor of display setup
 WindowSize: [720, 480] # This will be the size of the full screen window
-NViews: 1 # The number of maze views for this node
-ViewAngles: [0] # List of view angles for each view
-DisplayRegions: [  [0, 1, 0, 1] ] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
-MonitorSizes: [ [43, 24]] # Size in cm of each display/view
-MonitorDistances: [12] # Distance from mouse's eye to each display
-MonitorOffsets: [ [0, 8] ] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
+ViewAngle: 0 # List of view angles for each view
+DisplayRegion: [250, 0, 1420, 1200] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
+MonitorSize: [52, 25.5] # Size in cm of each display/view
+MonitorDistance: 12 # Distance from mouse's eye to each display
+MonitorOffset: [0, -8] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
