@@ -27,6 +27,7 @@ import socket
 # Local code
 from ParametricShapes import makeCylinder, makePlane
 
+version = '1.0'
 
 # Read YAML file
 with open("display_config.yaml", 'r') as stream:
@@ -184,7 +185,7 @@ class App(ShowBase):
         self.data_socket = None # This will be configured by remote control
 
         self.last_timestamp = 0
-        self.taskMgr.add(self.readMsgs, "ReadZMQMessages", sort=1)
+        self.taskMgr.add(self.process_command_messages, "ReadZMQMessages", sort=1)
 
         self.accept('escape', self.exit_fun)
 
@@ -208,7 +209,7 @@ class App(ShowBase):
             self.right_sync_square = render2d.attachNewNode(right_square_node)
 
             self.sync_state = 0
-            self.taskMgr.add(self.syncSquares, "FlashSyncSquares", sort=2) # execute after the readMsgs function
+            self.taskMgr.add(self.syncSquares, "FlashSyncSquares", sort=2) # execute after the process_command_messages function
             now = datetime.datetime.now()
             filename = '{}{}.csv'.format('ExperimentLog', now.strftime("%Y-%m-%d_%H%M"))
             self.sync_log_file = open(filename, 'w', newline='')
@@ -411,7 +412,29 @@ class App(ShowBase):
             self.sync_log_file.close()
         sys.exit()
 
-    def readMsgs(self, task):
+    def process_command_messages(self, task):
+        """ process_command_messages(): receive ZMQ messages for data and configuration
+
+            There are two sockets on which we listen for messages. The data_socket corresponds
+            to a ZMQ PUB/SUB server which is streaming timestamp and position data. 
+            The command_socket corresponds to a ZMQ server we start above that operates in the 
+            DEALER/REP configuration.
+
+            Here's a list of valid messages sent to the control server socket. All
+            control messages are expected to be a pickled dictionary. Every control
+            message has a "Command" field, and potentially other fields depending
+            on the message. Here's a list of possible "Command"s:
+                "QueryVersion": Reply is "Version:XXX;", where XXX is the version string
+                "LoadModel": The maze YAML is taken from msg["MazeConfig"]. If this field
+                    is missing, the default model is loaded (also if no MazeConfig is
+                    given). If the maze is valid, the reply "ModelLoaded" is sent. Otherwise 
+                    "ModelFailure" is sent, and the default is loaded.
+                "UpdateDataServer": The address of the data server (IP/socket) is given in
+                    msg["DataServerAddress"]. It's expected to be of the form
+                    "tcp://host:port". If we successfully subscribe, "DataServerUpdated"
+                    is sent. Otherwise "DataServerFailure".
+                "Exit": This shuts down the VR system. Reply is "Exiting".
+        """
         posY = self.posY
         msg_list = self.poller.poll(timeout=0.01)
         while msg_list:
@@ -427,7 +450,9 @@ class App(ShowBase):
                     pickled_msg = self.command_socket.recv() # Command Socket Messages are pickled dictionaries
                     msg = pickle.loads(pickled_msg)
                     print("Message received: ", msg)
-                    if msg['Command'] == 'LoadModel':
+                    if msg['Command'] == 'QueryVersion':
+                        self.command_socket.send("Version:{};".format(version).encode())
+                    elif msg['Command'] == 'LoadModel':
                         success = self.draw_model(msg.get("MazeConfig", {}))
                         if success:
                             self.command_socket.send(b"ModelLoaded")
@@ -439,7 +464,6 @@ class App(ShowBase):
                             self.command_socket.send(b"DataServerUpdated")
                         else:
                             self.command_socket.send(b"DataServerFailure")
-
                     elif msg['Command'] == 'Exit':
                         self.command_socket.send(b"Exiting")
                         self.exit_fun()
