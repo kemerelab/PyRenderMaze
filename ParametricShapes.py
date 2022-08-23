@@ -34,7 +34,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
     #  Per the wikipedia page (https://en.wikipedia.org/wiki/Triangle_strip), this ordering 
     #   results in upwards-facing normals.
 
-    if facing == "front": # In our world, forward is the plus y direction, (left is the negative x direction)
+    if facing.lower() == "front": # In our world, forward is the plus y direction, (left is the negative x direction)
         vertex.addData3(cx - w_2, cy, cz - h_2)
         vertex.addData3(cx + w_2, cy, cz - h_2)
         vertex.addData3(cx - w_2, cy, cz + h_2)
@@ -44,7 +44,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
         for i in range(4):
             vertexNormals.addData3(0, -1, 0)
 
-    elif facing == "left":
+    elif facing.lower() == "left":
         vertex.addData3(cx, cy + w_2, cz - h_2)
         vertex.addData3(cx, cy - w_2, cz - h_2)
         vertex.addData3(cx, cy + w_2, cz + h_2)
@@ -54,7 +54,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
         for i in range(4):
             vertexNormals.addData3(-1, 0, 0)
 
-    elif facing == "right":
+    elif facing.lower() == "right":
         vertex.addData3(cx, cy - w_2, cz - h_2)
         vertex.addData3(cx, cy + w_2, cz - h_2)
         vertex.addData3(cx, cy - w_2, cz + h_2)
@@ -64,7 +64,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
         for i in range(4):
             vertexNormals.addData3(1, 0, 0)
     
-    elif facing == "up":
+    elif facing.lower() == "up":
         vertex.addData3(cx - w_2, cy - h_2, cz)
         vertex.addData3(cx + w_2, cy - h_2, cz)
         vertex.addData3(cx - w_2, cy + h_2, cz)
@@ -101,6 +101,7 @@ def makePlane(cx, cy, cz, width, height, facing="left", color=[0.25, 0.25, 0.25]
 def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
                  texHScaling=1.0, texVScaling=1.0, color=[0.25, 0.25, 0.25],
                  alpha=1.0):
+
     format = GeomVertexFormat.getV3n3cpt2()
     vdata = GeomVertexData('cylinder', format, Geom.UHDynamic)
 
@@ -114,10 +115,10 @@ def makeCylinder(cx, cy, cz, radius, height, num_divisions=20, facing="outward",
     theta = [(2 * math.pi * k / num_divisions) for k in range(num_divisions)]
     theta.append(0)
     for k, th in enumerate(theta):
-        if facing=="outward":
+        if facing.lower()=="outward":
             vertex.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), cz + height/2)
             vertex.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), cz - height/2)
-        elif facing=="inward":
+        elif facing.lower()=="inward":
             vertex.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), cz - height/2)
             vertex.addData3(cx + radius*math.cos(th), cy + radius*math.sin(th), cz + height/2)
         else:

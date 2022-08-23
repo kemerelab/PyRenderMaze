@@ -1,0 +1,60 @@
+# Yamale schema descibing yaml descriptor VR mazes
+# (requires the yamale python package)
+
+TrackLength: int(min=0) # TrackLength is required (to repeat track) TODO: make it required only if repeating track
+WallHeight: int(min=0, required=True) # WallHeight and WallDistance are required (TODO: shouldn't have to be)
+WallDistance: int(min=0, required=True)
+EnableBackgroundTexture: bool(required=False) # Defaults to true
+
+TrackFeatures: map(any(include('Plane'), include('Cylinder'), include('Wall'), include('WallCylinder')))
+---
+# Note about dimensions. Y is along the track in the forward/backward dimension, Z is up and down, and X is left and right
+TrackFeature: &TrackFeature
+    Texture: str(required=False) # ideally parse as a filename
+    TextureScaling: num(min=0.0, required=False) # scaling for texture. default = 1.0
+    RotateTexture: num(required=False) # angle to rotate texture by. default = no rotation
+    Color: list(num(min=0.0, max=1.0), min=3, max=3, required=False) # rgb triple. default=[0.5, 0.5, 0.5]
+    Alpha: num(min=0.0, max=1.0, required=False) # default=1.0 (no alpha)
+    DuplicateForward: bool(required=False) # make a second copy of feature in a second (presumably unreachable) default = True
+
+Plane:
+    Type: str(equals='Plane', ignore_case=True)
+    Width: num(min=0.0) # size in the X direction (facing=front or up) or in the Y dimension (facing=left or right)
+    Height: num(min=0.0) # size either in  Z dimension (facing=left, right, or front) or Y dimension (facing=up) TODO: add facing=down
+    Facing: any(str(equals='Front', ignore_case=True), str(equals='Left', ignore_case=True), 
+                str(equals='Right', ignore_case=True), str(equals='Up', ignore_case=True)) # normal direction is important for textures.    
+    XPos: num(required=False) # dimension across width of track. default=0
+    YPos: num(required=False) # dimension along track. default=0
+    ZPos: num(required=False) # dimension above and below surface of track. default=0
+    <<: *TrackFeature
+
+Cylinder: # This is a vertical cylinder
+    Type: str(equals='Cylinder', ignore_case=True)
+    Radius: num(min=0.0)
+    Height: num(min=0.0)
+    Facing: any(None, str(equals='Outward', ignore_case=True), str(equals='Inward', ignore_case=True)) # normal direction outward (default) means the mouse is intended to see the outside of the cylinder  
+    XPos: num() # X location of center
+    YPos: num() # Y location of center
+    ZPos: num(required=False) # Z location of center. default is track vertical position
+    <<: *TrackFeature
+
+WallFeature: &WallFeature
+    XLocation: any(None, str(equals='Both', ignore_case=True), str(equals='Left', ignore_case=True), 
+                         str(equals='Right', ignore_case=True), required=False) # position relative to track. defaults to 'both'
+
+
+Wall: # Shortcut for a plane which runs along the side of the virtual track. Height is defined by global "WallHeight"
+    Type: str(equals='Wall', ignore_case=True)
+    Bounds: list(num(), num()) # location of wall in Y coordinates.
+    XOffset: num(required=False) # horizontal offset of wall from edge of track. default=0
+    <<: *WallFeature
+    <<: *TrackFeature
+
+WallCylinder: # Shortcut for a cylinder that is embedded such that the track walls running through the center
+    Type: str(equals='WallCylinder', ignore_case=True)
+    YPos: num() # Y location of center
+    Radius: num(min=0.0, required=False) # defaults to 5
+    Height: num(min=0.0, required=False) # defaults to WallHeight*3
+    <<: *WallFeature
+    <<: *TrackFeature
+
