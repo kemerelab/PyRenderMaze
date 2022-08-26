@@ -90,7 +90,7 @@ def makePlane(batch, texgroup, cx, cy, cz, width, height, facing="left", color=[
     tex_coords.extend([1.0 * texHScaling, 1.0* texVScaling])
 
 
-    batch.add_indexed(4+2, pyglet.gl.GL_TRIANGLE_STRIP, texgroup,
+    vlist = batch.add_indexed(4+2, pyglet.gl.GL_TRIANGLE_STRIP, texgroup,
                 range(4+2), # index is just 0, 1, 2, 3
                 ('v3f', add_degenerates(vertices,3)),
                 ('c4f', add_degenerates(colors,4)),
@@ -98,11 +98,11 @@ def makePlane(batch, texgroup, cx, cy, cz, width, height, facing="left", color=[
                 ('t2f', add_degenerates(tex_coords,2))
             )
 
-    return
+    return vlist
 
 
 # helper function to make a vertical cylinder given center, radius, and height
-def makeCylinder(batch, texgroup, cx, cy, cz, radius, height, num_divisions=20, facing="outward",
+def makeCylinder(batch, texgroup, cx, cy, cz, radius, height, num_divisions=30, facing="outward",
                  texHScaling=1.0, texVScaling=1.0, color=[0.25, 0.25, 0.25],
                  alpha=1.0):
 
@@ -125,7 +125,6 @@ def makeCylinder(batch, texgroup, cx, cy, cz, radius, height, num_divisions=20, 
         else:
             raise(ValueError("Cylinder facing direction unknown. ({})".forward(facing)))
 
-
         normals.extend([cx + radius*math.cos(th), cy + radius*math.sin(th), 0])
         normals.extend([cx + radius*math.cos(th), cy + radius*math.sin(th), 0])
 
@@ -139,12 +138,12 @@ def makeCylinder(batch, texgroup, cx, cy, cz, radius, height, num_divisions=20, 
         tri_indices.append(2*k)
         tri_indices.append(2*k+1)
 
-    batch.add_indexed(len(tri_indices)+2, pyglet.gl.GL_TRIANGLE_STRIP, texgroup,
-            range(num_divisions*2+2), 
+    vlist = batch.add_indexed(len(tri_indices)+2, pyglet.gl.GL_TRIANGLE_STRIP, texgroup,
+            range((num_divisions+3)*2), 
             ('v3f', add_degenerates(vertices,3)),
             ('c4f', add_degenerates(colors,4)),
             ('n3f', add_degenerates(normals,3)),
             ('t2f', add_degenerates(tex_coords,2))
-        )
+        )            
 
-    return
+    return vlist

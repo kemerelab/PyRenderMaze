@@ -1,7 +1,8 @@
 # Yaml descriptor of display setup
-WindowSize: [720, 480] # This will be the size of the full screen window
+# WindowSize: [720, 480] # This will be the size of the full screen window
 ViewAngle: 0 # List of view angles for each view
-DisplayRegion: [250, 0, 1420, 1200] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
-MonitorSize: [52, 25.5] # Size in cm of each display/view
-MonitorDistance: 12 # Distance from mouse's eye to each display
-MonitorOffset: [0, -8] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
+DisplayRegion: [12, 0, 28, 29.5] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
+MonitorSize: [52.1, 29.5] # Size in cm of each display/view
+# MonitorSize: [28.9, 18.8] # Size in cm of each display/view
+MonitorDistance: 11.99 # Distance from mouse's eye to each display
+MonitorOffset: [0,-8] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
