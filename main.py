@@ -30,10 +30,10 @@ class Window(pyglet.window.Window):
         self.screen_h_res = screen.width
         self.screen_v_res = screen.height
 
-        # super().__init__(width=self.screen_h_res, height=self.screen_v_res,
-        #                 #  style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS,
-        #                  caption="PyRenderMaze", *args, **kwargs)
-        super().__init__(fullscreen=True, caption="PyRenderMaze", *args, **kwargs)
+        super().__init__(width=self.screen_h_res, height=self.screen_v_res,
+                        #  style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS,
+                         caption="PyRenderMaze", *args, **kwargs)
+        # super().__init__(fullscreen=True, caption="PyRenderMaze", *args, **kwargs)
 
         self._synced_position = synced_position
 
@@ -150,7 +150,7 @@ class Window(pyglet.window.Window):
         pyglet.gl.glPushMatrix()
         pyglet.gl.glRotatef(-90,1,0,0) # Our model has Z pointing up
         pyglet.gl.glRotatef(-self.camera_view_angle,0,0,1) # Adjust for camera view
-        pyglet.gl.glTranslatef(0, self._synced_position.value, 0)
+        pyglet.gl.glTranslatef(0, -self._synced_position.value, 0) # This moves the model(!), so opposite to position
 
         self.model.draw()
 

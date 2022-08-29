@@ -99,7 +99,7 @@ class Communicator:
                     self.last_timestamp, pos = struct.unpack('<Ld',msg)
                     if pos != self.pos:
                         self.pos = pos
-                        self._synced_position = self.pos
+                        self._synced_position.value = self.pos
 
                 elif sock==self.command_socket:
                     print('Got a command message')
@@ -147,6 +147,6 @@ def start_commmunicator(synced_state, synced_position, config_queue):
     try:
         communicator.process_command_messages()
     except KeyboardInterrupt:
-        communicator.exit_fun()
+        communicator.exit_fun() # Unclear whether this matters, but it makes things cleaner
     except Exception as e:
         print("Exception!!!", e)
