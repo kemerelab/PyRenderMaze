@@ -1,8 +1,10 @@
 # Yaml descriptor of display setup
-# WindowSize: [720, 480] # This will be the size of the full screen window
-ViewAngle: 0 # List of view angles for each view
-DisplayRegion: [12, 0, 28, 29.5] # List of display regions for each view. Defined relative to one megawindow spanning multiple displays.
-MonitorSize: [52.1, 29.5] # Size in cm of each display/view
-# MonitorSize: [28.9, 18.8] # Size in cm of each display/view
-MonitorDistance: 11.99 # Distance from mouse's eye to each display
+ViewAngle: 0 # View angles for display (measured rotating around the vertical axis, so 0 is straight ahead, 90 is left, etc)
+# MonitorSize: [52.1, 29.5] # Size in cm of each display/view
+MonitorSize: [28.9, 18.8] # Size in cm of display
+DisplayRegion: [0, 0, 28.9, 18.8] # Cropping region of monitor in which to display (in cm)
+MonitorDistance: 12 # Distance from mouse's eye to monitor (in cm)
+ClippingDistance: 0.05 # Rendered perspective will reach this close to eye (in cm). 
 MonitorOffset: [0,-8] # For each view, if we draw a ray from the eye perpendicular to the display, it intersects at this location
+MouseEyeHeight: 3 # Height of mouse relative to the vertical origin (Z=0). 
+                  # This allows the model to have a simple 0 coordinate corresponding to the track rather than the eye!
